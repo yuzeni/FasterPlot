@@ -10,7 +10,8 @@
 
 std::pair<char *, size_t> parse_file_cstr(const char *file_name);
 
-void parse_numeric_csv_file(std::vector<std::vector<double>> &data_list, std::string file_name);
+struct Plot_Data;
+std::vector<Plot_Data*> parse_numeric_csv_file(std::string file_name);
 
 #define ERROR_MSG_SIZE 1024
 

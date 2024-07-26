@@ -1,7 +1,11 @@
 #include "utils.hpp"
 
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <utility>
+
+#include "flusssensor_tool.hpp"
 
 std::pair<char *, size_t> parse_file_cstr(const char *file_name)
 {
@@ -48,8 +52,17 @@ static bool is_alpha(char c)
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
 
-void parse_numeric_csv_file(std::vector<std::vector<double>> &data_list, std::string file_name)
+static void fix_comma_notation(bool inside_string, char* p) {
+    if (inside_string) {
+	if (*p == ',')
+	    *p = '.';
+    }
+}
+
+std::vector<Plot_Data*> parse_numeric_csv_file(std::string file_name)
 {
+    std::vector<Plot_Data*> data_list;
+    
     auto load_result = parse_file_cstr(file_name.c_str());
     char* p = load_result.first;
     size_t file_size = load_result.second;
@@ -57,10 +70,16 @@ void parse_numeric_csv_file(std::vector<std::vector<double>> &data_list, std::st
 
     size_t data_column = 0;
     if (data_list.size() < data_column + 1)
-	data_list.push_back({});
+	data_list.push_back(new Plot_Data);
     
 
+    bool inside_string = false;
+
+    char* prev_p = p;
+    
     while (p < p_end) {
+	
+	prev_p = p;
 	
 	while (p < p_end && is_whitespace(*p)) {
 	    if (is_new_line(*p))
@@ -68,27 +87,74 @@ void parse_numeric_csv_file(std::vector<std::vector<double>> &data_list, std::st
 	    ++p;
 	}
 
+	if (p < p_end && *p == '\"') {
+	    inside_string = !inside_string;
+	    ++p;
+	}
+
+	// change coma to dots, if inside a string (fixing , notation in numbers)
+	fix_comma_notation(inside_string, p);
 	if (p < p_end && (is_digit(*p) || (((p[0] == '.') || (p[0] == '+') || (p[0] == '-')) && is_digit(*(p + 1))))) {
 	    bool has_point = (*p == '.');
 	    char* begin = p;
 	    ++p;
+
+	    fix_comma_notation(inside_string, p);
 	    while (p < p_end && (is_digit(*p) || *p == '.' || is_alpha(*p))) {
 		if (has_point && (*p == '.'))
 		    break;
 		has_point |= (*p == '.');
 		++p;
+		fix_comma_notation(inside_string, p);
 	    }
-	    
-	    data_list[data_column].push_back(std::strtod(begin, &p));
-	    if (errno == ERANGE)
-		std::cout << "Parsed number was out of range\n";
-	}
 
+	    // parse time code
+	    if (p < p_end && *p == ':') {
+		double time_s = 0;
+		time_s += std::strtod(begin, &p) * 60 * 60; // hours
+		++p;
+		begin = p;
+		p += 2;
+		time_s += std::strtod(begin, &p) * 60; // minutes
+		++p;
+		begin = p;
+		p += 2;
+		*p = ':';
+		time_s += std::strtod(begin, &p); // seconds
+		++p;
+		begin = p;
+		p += 3;
+		time_s += std::strtod(begin, &p) * 0.001; // milliseconds
+
+		data_list[data_column]->x.push_back(time_s);
+	    }
+	    // parse number
+	    else {
+		data_list[data_column]->x.push_back(std::strtod(begin, &p));
+		if (errno == ERANGE)
+		    std::cout << "Parsed number was out of range\n";
+	    }
+	}
+	
 	if (p < p_end && *p == ',') {
 	    ++data_column;
 	    while (data_list.size() - 1 < data_column)
-		data_list.push_back({});
+		data_list.push_back(new Plot_Data);
+	    ++p;
+	}
+
+	if (p < p_end && p == prev_p && inside_string) {
+	    char* begin = p;
+	    while (p < p_end && inside_string) {
+		++p;
+		if (p < p_end && *p == '\"') {
+		    inside_string = !inside_string;
+		}
+		fix_comma_notation(inside_string, p);
+	    }
+	    data_list[data_column]->header += std::string(begin, p - begin);
 	    ++p;
 	}
     }
+    return data_list;
 }
