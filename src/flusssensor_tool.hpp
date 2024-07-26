@@ -4,6 +4,32 @@
 #include <vector>
 
 #include "function_fitting.hpp"
+#include "utils.hpp"
+
+constexpr int graph_color_array_cnt = 21;
+inline Color graph_color_array[graph_color_array_cnt] = {
+    RED,
+    YELLOW,
+    GOLD,
+    ORANGE,
+    PINK,
+    MAROON,
+    GREEN,
+    LIME,
+    DARKGREEN,
+    SKYBLUE,
+    BLUE,
+    DARKBLUE,
+    PURPLE,
+    VIOLET,
+    DARKPURPLE,
+    BEIGE,
+    BROWN,
+    DARKBROWN,
+    LIGHTGRAY,
+    GRAY,
+    DARKGRAY,
+};
 
 enum Plot_Type
 {
@@ -18,9 +44,9 @@ struct Plot_Data
     Plot_Type plot_type = Plot_Type(PT_DISCRETE | PT_INTERP_LINEAR);
     float thickness = 4;
     
-    std::vector<double> x;
-    Plot_Data* y = nullptr;
-    Sinusoidal_Function periodic_fit;
+    std::vector<double> y;
+    Plot_Data* x = nullptr;
+    Sinusoidal_Function periodic_fit; // DEPRI
 };
 
 struct Coordinate_System
@@ -49,31 +75,22 @@ struct Coordinate_System
 struct VP_Camera
 {
     Coordinate_System coord_sys;
+    Vec2<double> origin_offset = {0, 0};
 
     bool is_undefined() { return coord_sys.basis_x.length() == 0 || coord_sys.basis_y.length() == 0; }
 };
 
-constexpr int graph_color_array_cnt = 21;
-inline Color graph_color_array[graph_color_array_cnt] = {
-    RED,
-    YELLOW,
-    GOLD,
-    ORANGE,
-    PINK,
-    MAROON,
-    GREEN,
-    LIME,
-    DARKGREEN,
-    SKYBLUE,
-    BLUE,
-    DARKBLUE,
-    PURPLE,
-    VIOLET,
-    DARKPURPLE,
-    BEIGE,
-    BROWN,
-    DARKBROWN,
-    LIGHTGRAY,
-    GRAY,
-    DARKGRAY,
+struct Data_Manager {
+public:
+
+    Data_Manager();
+    ~Data_Manager();
+
+    void add_data(std::string file = "../test_eingabe/simple.csv");
+    void draw();
+    
+    std::vector<Plot_Data*> plot_data;
+    std::vector<Function*> functions;
+    VP_Camera camera;
+    const Vec2<int> plot_padding = {50, 50};
 };

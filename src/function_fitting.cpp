@@ -1,82 +1,299 @@
 #include "function_fitting.hpp"
+#include "flusssensor_tool.hpp"
 
 #include <cmath>
 
-double Sinusoidal_Function::operator()(double x)
+double Sinusoidal_Function::operator()(double x) const
 {
     return a + b * std::cos(omega * x) + c * std::sin(omega * x);
 }
 
-static void get_SS_n(double* SS_n, int n, std::vector<Vec2<double>>& data)
+double Linear_Function::operator()(double x) const
+{
+    return a * x + b;
+}
+
+static void get_SS_n(double* SS_n, int n, Plot_Data* data)
 {
     double SS_i = 0, S_i = 0, S_i_m1 = 0;
     SS_n[0] = SS_i;
     for(int i = 1; i < n; ++i) {
-	S_i = S_i_m1 + 0.5 * (data[i].y + data[i - 1].y) * (data[i].x - data[i-1].x);
-	SS_i = SS_i + 0.5 * (S_i + S_i_m1) * (data[i].x - data[i-1].x);
+	S_i = S_i_m1 + 0.5 * (data->y[i] + data->y[i - 1]) * (data->x->y[i] - data->x->y[i-1]);
+	SS_i = SS_i + 0.5 * (S_i + S_i_m1) * (data->x->y[i] - data->x->y[i-1]);
 	S_i_m1 = S_i;
 	SS_n[i] = SS_i;
     }
 }
 
+struct Vector_4
+{
+    double v[4];
+
+    Vector_4(double v[4]) {
+	for(int i = 0; i < 4; ++i)
+	    this->v[i] = v[i];
+    }
+};
+
+struct Vector_3
+{
+    double v[3];
+
+    Vector_3(double v[3]) {
+	for(int i = 0; i < 3; ++i)
+	    this->v[i] = v[i];
+    }
+};
+
 struct Matrix_4x4
 {
     double m[4][4];
     
-    void invert()
-    {
-	
+    Matrix_4x4(double m[4][4]) {
+	for(int i = 0; i < 4; ++i) {
+	    for(int j = 0; j < 4; ++j) {
+		this->m[i][j] = m[i][j];
+	    }
+	}
     }
     
-private:
-    double get_determinant(Matrix_4x4 mat)
+    Matrix_4x4 get_inverse()
     {
-	double D = m[0][0] * (m[1][1] * (m[2][2] * m[3][3] - m[2][3] * m[3][2])
-			      - m[1][2] * (m[2][1] * m[3][3] - m[2][3] * m[3][1])
-			      + m[1][3] * (m[2][1] * m[3][2] - m[2][2] * m[3][1]))
-		- m[0][1] * (m[1][0] * (m[2][2] * m[3][3] - m[2][3] * m[3][2])
-			     - m[1][2] * (m[2][0] * m[3][3] - m[2][3] * m[3][0])
-			     + m[1][3] * (m[2][0] * m[3][2] - m[2][2] * m[3][0]))
-		+ m[0][2] * (m[1][0] * (m[2][1] * m[3][3] - m[2][3] * m[3][1])
-			     - m[1][1] * (m[2][0] * m[3][3] - m[2][3] * m[3][0])
-			     + m[1][3] * (m[2][0] * m[3][1] - m[2][1] * m[3][0]))
-		- m[0][3] * (m[1][0] * (m[2][1] * m[3][2] - m[2][2] * m[3][1])
-			     - m[1][1] * (m[2][0] * m[3][2] - m[2][2] * m[3][0])
-			     + m[1][2] * (m[2][0] * m[3][1] - m[2][1] * m[3][0]));
-	return D;
+	double _1_div_det = 1.0 / get_determinant();
+	Matrix_4x4 adj = get_adjugate();
+	for(int i = 0; i < 4; ++i) {
+	    for(int j = 0; j < 4; ++j) {
+		adj.m[i][j] *= _1_div_det;
+	    }
+	}
+	return adj;
     }
     
-    Matrix_4x4 get_adjugate(Matrix_4x4 mat)
-	{
-	    Matrix_4x4 adj = {
-		{f * k * p - f * l * o - g * j * p + g * l * n + h * j * o - h * k * n,
-		  - b * k * p + b * l * o + c * j * p - c * l * n - d * j * o + d * k * n,
-		 b * g * p - b * h * o - c * f * p + c * h * n + d * f * o - d * g * n,
-		  - b * g * l + b * h * k + c * f * l - c * h * j - d * f * k + d * g * j},
+    double get_determinant()
+    {
+	double det = m[0][0] * (m[1][1] * (m[2][2] * m[3][3] - m[2][3] * m[3][2])
+				- m[1][2] * (m[2][1] * m[3][3] - m[2][3] * m[3][1])
+				+ m[1][3] * (m[2][1] * m[3][2] - m[2][2] * m[3][1]))
+	    - m[0][1] * (m[1][0] * (m[2][2] * m[3][3] - m[2][3] * m[3][2])
+			 - m[1][2] * (m[2][0] * m[3][3] - m[2][3] * m[3][0])
+			 + m[1][3] * (m[2][0] * m[3][2] - m[2][2] * m[3][0]))
+	    + m[0][2] * (m[1][0] * (m[2][1] * m[3][3] - m[2][3] * m[3][1])
+			 - m[1][1] * (m[2][0] * m[3][3] - m[2][3] * m[3][0])
+			 + m[1][3] * (m[2][0] * m[3][1] - m[2][1] * m[3][0]))
+	    - m[0][3] * (m[1][0] * (m[2][1] * m[3][2] - m[2][2] * m[3][1])
+			 - m[1][1] * (m[2][0] * m[3][2] - m[2][2] * m[3][0])
+			 + m[1][2] * (m[2][0] * m[3][1] - m[2][1] * m[3][0]));
+	return det;
+    }
+
+    Matrix_4x4 get_adjugate()
+    {
+	double adj[4][4]{
+	    {m[1][1]*m[2][2]*m[3][3]-m[1][1]*m[2][3]*m[3][2]-m[1][2]*m[2][1]*m[3][3]+m[1][2]*m[2][3]*m[3][1]+m[1][3]*m[2][1]*m[3][2]-m[1][3]*m[2][2]*m[3][1],
+	     -m[0][1]*m[2][2]*m[3][3]+m[0][1]*m[2][3]*m[3][2]+m[0][2]*m[2][1]*m[3][3]-m[0][2]*m[2][3]*m[3][1]-m[0][3]*m[2][1]*m[3][2]+m[0][3]*m[2][2]*m[3][1],
+	     m[0][1]*m[1][2]*m[3][3]-m[0][1]*m[1][3]*m[3][2]-m[0][2]*m[1][1]*m[3][3]+m[0][2]*m[1][3]*m[3][1]+m[0][3]*m[1][1]*m[3][2]-m[0][3]*m[1][2]*m[3][1],
+	     -m[0][1]*m[1][2]*m[2][3]+m[0][1]*m[1][3]*m[2][2]+m[0][2]*m[1][1]*m[2][3]-m[0][2]*m[1][3]*m[2][1]-m[0][3]*m[1][1]*m[2][2]+m[0][3]*m[1][2]*m[2][1]},
 	
-		{ - e * k * p + e * l * o + g * i * p - g * l * m - h * i * o + h * k * m,
-		 m[0][0] * k * p - m[0][0] * l * o - c * i * p + c * l * m + d * i * o - d * k * m,
-		  - m[0][0] * g * p + m[0][0] * h * o + c * e * p - c * h * m - d * e * o + d * g * m,
-		 m[0][0] * g * l - m[0][0] * h * k - c * e * l + c * h * i + d * e * k - d * g * i},
+	    {-m[1][0]*m[2][2]*m[3][3]+m[1][0]*m[2][3]*m[3][2]+m[1][2]*m[2][0]*m[3][3]-m[1][2]*m[2][3]*m[3][0]-m[1][3]*m[2][0]*m[3][2]+m[1][3]*m[2][2]*m[3][0],
+	     m[0][0]*m[2][2]*m[3][3]-m[0][0]*m[2][3]*m[3][2]-m[0][2]*m[2][0]*m[3][3]+m[0][2]*m[2][3]*m[3][0]+m[0][3]*m[2][0]*m[3][2]-m[0][3]*m[2][2]*m[3][0],
+	     -m[0][0]*m[1][2]*m[3][3]+m[0][0]*m[1][3]*m[3][2]+m[0][2]*m[1][0]*m[3][3]-m[0][2]*m[1][3]*m[3][0]-m[0][3]*m[1][0]*m[3][2]+m[0][3]*m[1][2]*m[3][0],
+	     m[0][0]*m[1][2]*m[2][3]-m[0][0]*m[1][3]*m[2][2]-m[0][2]*m[1][0]*m[2][3]+m[0][2]*m[1][3]*m[2][0]+m[0][3]*m[1][0]*m[2][2]-m[0][3]*m[1][2]*m[2][0]},
 	
-		{e * j * p - e * l * n - f * i * p + f * l * m + h * i * n - h * j * m,
-		  - m[0][0] * j * p + m[0][0] * l * n + b * i * p - b * l * m - d * i * n + d * j * m,
-		 m[0][0] * f * p - m[0][0] * h * n - b * e * p + b * h * m + d * e * n - d * f * m,
-		  - m[0][0] * f * l + m[0][0] * h * j + b * e * l - b * h * i - d * e * j + d * f * i},
+	    {m[1][0]*m[2][1]*m[3][3]-m[1][0]*m[2][3]*m[3][1]-m[1][1]*m[2][0]*m[3][3]+m[1][1]*m[2][3]*m[3][0]+m[1][3]*m[2][0]*m[3][1]-m[1][3]*m[2][1]*m[3][0],
+	     -m[0][0]*m[2][1]*m[3][3]+m[0][0]*m[2][3]*m[3][1]+m[0][1]*m[2][0]*m[3][3]-m[0][1]*m[2][3]*m[3][0]-m[0][3]*m[2][0]*m[3][1]+m[0][3]*m[2][1]*m[3][0],
+	     m[0][0]*m[1][1]*m[3][3]-m[0][0]*m[1][3]*m[3][1]-m[0][1]*m[1][0]*m[3][3]+m[0][1]*m[1][3]*m[3][0]+m[0][3]*m[1][0]*m[3][1]-m[0][3]*m[1][1]*m[3][0],
+	     -m[0][0]*m[1][1]*m[2][3]+m[0][0]*m[1][3]*m[2][1]+m[0][1]*m[1][0]*m[2][3]-m[0][1]*m[1][3]*m[2][0]-m[0][3]*m[1][0]*m[2][1]+m[0][3]*m[1][1]*m[2][0]},
 	
-		{ - e * j * o + e * k * n + f * i * o - f * k * m - g * i * n + g * j * m,
-		 m[0][0] * j * o - m[0][0] * k * n - b * i * o + b * k * m + c * i * n - c * j * m,
-		  - m[0][0] * f * o + m[0][0] * g * n + b * e * o - b * g * m - c * e * n + c * f * m,
-		 m[0][0] * f * k - m[0][0] * g * j - b * e * k + b * g * i + c * e * j - c * f * i}
-	    };
+	    {-m[1][0]*m[2][1]*m[3][2]+m[1][0]*m[2][2]*m[3][1]+m[1][1]*m[2][0]*m[3][2]-m[1][1]*m[2][2]*m[3][0]-m[1][2]*m[2][0]*m[3][1]+m[1][2]*m[2][1]*m[3][0],
+	     m[0][0]*m[2][1]*m[3][2]-m[0][0]*m[2][2]*m[3][1]-m[0][1]*m[2][0]*m[3][2]+m[0][1]*m[2][2]*m[3][0]+m[0][2]*m[2][0]*m[3][1]-m[0][2]*m[2][1]*m[3][0],
+	     -m[0][0]*m[1][1]*m[3][2]+m[0][0]*m[1][2]*m[3][1]+m[0][1]*m[1][0]*m[3][2]-m[0][1]*m[1][2]*m[3][0]-m[0][2]*m[1][0]*m[3][1]+m[0][2]*m[1][1]*m[3][0],
+	     m[0][0]*m[1][1]*m[2][2]-m[0][0]*m[1][2]*m[2][1]-m[0][1]*m[1][0]*m[2][2]+m[0][1]*m[1][2]*m[2][0]+m[0][2]*m[1][0]*m[2][1]-m[0][2]*m[1][1]*m[2][0]}
 	};
 
-double Sinusoidal_Function::fit_to_data(std::vector<Vec2<double>> &data)
+	return Matrix_4x4{adj};
+    }
+
+    Vector_4 mul_vector_4(Vector_4 vec) {
+
+	double v[4] {0,0,0,0};
+	Vector_4 result{v};
+	
+	for(int i = 0; i < 4; ++i) {
+	    for(int j = 0; j < 4; ++j) {
+		result.v[j] += vec.v[i] * m[j][i];
+	    }
+	}
+	return result;
+    }
+};
+
+struct Matrix_3x3
 {
-    int n = data.size();
+    double m[3][3];
+    
+    Matrix_3x3(double m[3][3]) {
+	for(int i = 0; i < 3; ++i) {
+	    for(int j = 0; j < 3; ++j) {
+		this->m[i][j] = m[i][j];
+	    }
+	}
+    }
+    
+    Matrix_3x3 get_inverse()
+    {
+	double _1_div_det = 1.0 / get_determinant();
+	Matrix_3x3 adj = get_adjugate();
+	for(int i = 0; i < 3; ++i) {
+	    for(int j = 0; j < 3; ++j) {
+		adj.m[i][j] *= _1_div_det;
+	    }
+	}
+	return adj;
+    }
+
+    double get_determinant()
+    {
+	double det = m[0][0] * m[1][1] * m[2][2]
+	    - m[0][0] * m[1][2] * m[2][1]
+	    - m[0][1] * m[1][0] * m[2][2]
+	    + m[0][1] * m[1][2] * m[2][0]
+	    + m[0][2] * m[1][0] * m[2][1]
+	    - m[0][2] * m[1][1] * m[2][0];
+	return det;
+    }
+
+    Matrix_3x3 get_adjugate()
+    {
+	double adj[3][3]{
+	    {m[1][1] * m[2][2] - m[1][2] * m[2][1], m[0][2] * m[2][1] - m[0][1] * m[2][2], m[0][1] * m[1][2] - m[0][2] * m[1][1]},
+	    {m[1][2] * m[2][0] - m[1][0] * m[2][2], m[0][0] * m[2][2] - m[0][2] * m[2][0], m[0][2] * m[1][0] - m[0][0] * m[1][2]},
+	    {m[1][0] * m[2][1] - m[1][1] * m[2][0], m[0][1] * m[2][0] - m[0][0] * m[2][1], m[0][0] * m[1][1] - m[0][1] * m[1][0]},
+	};
+
+	return Matrix_3x3{adj};
+    }
+
+    Vector_3 mul_vector_3(Vector_3 vec) {
+
+	double v[3] {0,0,0};
+	Vector_3 result{v};
+	
+	for(int i = 0; i < 3; ++i) {
+	    for(int j = 0; j < 3; ++j) {
+		result.v[j] += vec.v[i] * m[j][i];
+	    }
+	}
+	return result;
+    }
+};
+
+void Sinusoidal_Function::fit_to_data(Plot_Data* data)
+{
+    if(!data->x)
+	return;
+    
+    int n = std::min(data->y.size(), data->x->y.size());
+    
     double* SS_n = new double[n];
     get_SS_n(SS_n, n, data);
+
+    double ssn_sqr = 0;
+    double ssn_xn_sqr = 0;
+    double ssn_xn = 0;
+    double ssn = 0;
+    double xn_tess = 0;
+    double xn_cubed = 0;
+    double xn_sqr = 0;
+    double xn = 0;
+    double ssn_yn = 0;
+    double xn_sqr_yn = 0;
+    double xn_yn = 0;
+    double yn = 0;
     
-    
+    for(int i = 0; i < n; ++i)
+    {
+	double xk  = data->x->y[i];
+	double yk  = data->y[i];
+	double SSk = SS_n[i];
+	
+	ssn_sqr    += SSk * SSk;
+	ssn_xn_sqr += SSk * xk * xk;
+	ssn_xn     += SSk * xk;
+	ssn        += SSk;
+	xn_tess    += xk * xk * xk * xk;
+	xn_cubed   += xk * xk * xk;
+	xn_sqr     += xk * xk;
+	xn         += xk;
+	ssn_yn     += SSk * yk;
+	xn_sqr_yn  += xk * xk * yk;
+	xn_yn      += xk * yk;
+	yn         += yk;
+    }
+
     delete[] SS_n;
+    
+    double m4[4][4] {
+	{ssn_sqr,    ssn_xn_sqr, ssn_xn,   ssn},
+	{ssn_xn_sqr, xn_tess,    xn_cubed, xn_sqr},
+	{ssn_xn,     xn_cubed,   xn_sqr,   xn},
+	{ssn,        xn_sqr,     xn,       double(n)},
+    };
+    Matrix_4x4 mat4{m4};
+
+    double v[4] {
+	ssn_yn,
+	xn_sqr_yn,
+	xn_yn,
+	yn,
+    };
+    Vector_4 vec4{v};
+    
+    Vector_4 c_vec = mat4.get_inverse().mul_vector_4(vec4);
+
+    omega = std::sqrt(-c_vec.v[0]);
+
+    double sin_omega_xn = 0;
+    double cos_omega_xn = 0;
+    double sin_sqr_omega_xn = 0;
+    double sin_omega_xn_cos_omega_xn = 0;
+    double cos_sqr_omega_xn = 0;
+    double yn_sin_omega_xn = 0;
+    double yn_cos_omega_xn = 0;
+
+    for(int i = 0; i < n; ++i)
+    {
+	double xk  = data->x->y[i];
+	double yk  = data->y[i];
+	double sin_omega_xk = std::sin(omega * xk);
+	double cos_omega_xk = std::cos(omega * xk);
+	
+	sin_omega_xn              += sin_omega_xk;
+	cos_omega_xn              += cos_omega_xk;
+	sin_sqr_omega_xn          += sin_omega_xk * sin_omega_xk;
+	sin_omega_xn_cos_omega_xn += sin_omega_xk * cos_omega_xk;
+	cos_sqr_omega_xn          += cos_omega_xk * cos_omega_xk;
+	yn_sin_omega_xn           += yk * sin_omega_xk;
+	yn_cos_omega_xn           += yk * cos_omega_xk;
+    }
+
+
+    double m3[3][3] {
+	{double(n),    sin_omega_xn,              cos_omega_xn},
+	{sin_omega_xn, sin_sqr_omega_xn,          sin_omega_xn_cos_omega_xn},
+	{cos_omega_xn, sin_omega_xn_cos_omega_xn, cos_sqr_omega_xn},
+    };
+    Matrix_3x3 mat3{m3};
+
+    double v3[3] {
+	yn,
+	yn_sin_omega_xn,
+	yn_cos_omega_xn,
+    };
+    Vector_3 vec3{v3};
+    
+    Vector_3 abc = mat3.get_inverse().mul_vector_3(vec3);
+
+    a = abc.v[0];
+    b = abc.v[1];
+    c = abc.v[2];
 }

@@ -8,6 +8,10 @@
 #include <string>
 #include <utility>
 
+namespace utils {
+    constexpr uint64_t default_str_hash_value = 5381;
+};
+
 std::pair<char *, size_t> parse_file_cstr(const char *file_name);
 
 struct Plot_Data;
@@ -27,7 +31,7 @@ void log_error(const char *msg, Args... args)
 	log_error("Last error message did not fit in the buffer of size %d.", ERROR_MSG_SIZE);
     }
     else {
-	printf(UTILS_ERROR_COLOR "ERROR:" UTILS_END_COLOR " %s", buffer);
+	printf(UTILS_ERROR_COLOR "ERROR:" UTILS_END_COLOR " %s\n", buffer);
     }
 }
 
@@ -51,3 +55,13 @@ struct Vec2
     T length() const { return std::sqrt(x*x + y*y); }
     void normalize() { T l = length(); x /= l, y /= l; };
 };
+
+consteval uint64_t cte_hash_c_str(const char *str, uint64_t hash = utils::default_str_hash_value)
+{
+    int c;
+    while((c = *(str++)))
+	hash = (hash * 33) ^ c;
+    return hash;
+}
+
+uint64_t hash_string_view(std::string_view s_v, uint64_t hash = utils::default_str_hash_value);

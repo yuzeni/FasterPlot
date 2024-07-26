@@ -126,11 +126,11 @@ std::vector<Plot_Data*> parse_numeric_csv_file(std::string file_name)
 		p += 3;
 		time_s += std::strtod(begin, &p) * 0.001; // milliseconds
 
-		data_list[data_column]->x.push_back(time_s);
+		data_list[data_column]->y.push_back(time_s);
 	    }
 	    // parse number
 	    else {
-		data_list[data_column]->x.push_back(std::strtod(begin, &p));
+		data_list[data_column]->y.push_back(std::strtod(begin, &p));
 		if (errno == ERANGE)
 		    std::cout << "Parsed number was out of range\n";
 	    }
@@ -157,4 +157,10 @@ std::vector<Plot_Data*> parse_numeric_csv_file(std::string file_name)
 	}
     }
     return data_list;
+}
+
+uint64_t hash_string_view(std::string_view s_v, uint64_t hash) {
+    for(size_t i = 0; i < s_v.size(); ++i)
+	hash = (hash * 33) ^ s_v[i];
+    return hash;
 }
