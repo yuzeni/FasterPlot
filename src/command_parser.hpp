@@ -1,10 +1,13 @@
 #pragma once
 
+#include "lexer.hpp"
+
 enum Object_Type
 {
     OT_undefined,
     OT_plot_data,
     OT_function,
+    OT_value,
 };
 
 struct Plot_Data;
@@ -12,6 +15,7 @@ struct Function;
 struct Command_Object
 {
     Object_Type type = OT_undefined;
+    Token tkn;
     union {
 	Plot_Data* plot_data;
 	Function* function;
@@ -62,6 +66,7 @@ inline int op_arg_cnt_table[OP_SIZE] {
 struct Command_Operator
 {
     Operator_Type type = OP_undefined;
+    Token tkn;
     bool is_undefined() { return type == OP_undefined; }
 };
 

@@ -21,21 +21,18 @@ static bool expect_next_token(Lexer &lexer) {
 static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexer)
 {
     Command_Object object;
-    if (!expect_next_token(lexer))
-	return {};
+    object.tkn = lexer.tkn;
 
     Token object_tkn = lexer.tkn;
 
-    if (!expect_next_token(lexer))
-	return {};
-
-    if (lexer.tkn.type != tkn_new && lexer.tkn.type != tkn_int) {
-	lexer.parsing_error(lexer.tkn, "Expected a number or the keyword 'new'.");
-	return {};
-    }
-    
     switch(object_tkn.type) {
     case tkn_data:
+	if (!expect_next_token(lexer))
+	    return {};
+	if (lexer.tkn.type != tkn_new && lexer.tkn.type != tkn_int) {
+	    lexer.parsing_error(lexer.tkn, "Expected a number or the keyword 'new'.");
+	    return {};
+	}
 	object.type = OT_plot_data;
 	if (lexer.tkn.type == tkn_new) {
 	    data_manager.plot_data.push_back(new Plot_Data);
@@ -52,6 +49,12 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
 	}
 	break;
     case tkn_function:
+	if (!expect_next_token(lexer))
+	    return {};
+	if (lexer.tkn.type != tkn_new && lexer.tkn.type != tkn_int) {
+	    lexer.parsing_error(lexer.tkn, "Expected a number or the keyword 'new'.");
+	    return {};
+	}
 	object.type = OT_function;
 	if (lexer.tkn.type == tkn_new) {
 	    data_manager.functions.push_back(new Function);
@@ -66,6 +69,10 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
 		return {};
 	    }
 	}
+        break;
+    case tkn_int:
+    case tkn_real:
+	object.type = OT_value;
 	break;
     default:
 	lexer.parsing_error(object_tkn, "Expected keywords 'data' or 'function'.");
@@ -77,10 +84,8 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
 
 static Command_Operator get_command_operator(Lexer& lexer)
 {
-    if (!expect_next_token(lexer))
-	return {};
-
     Command_Operator op;
+    op.tkn = lexer.tkn;
     
     switch(lexer.tkn.type) {
     case '+':
@@ -175,7 +180,7 @@ static double sub_op(double a, double b) { return a - b; }
 static double mul_op(double a, double b) { return a * b; }
 static double div_op(double a, double b) { return a / b; }
 
-void execute_operation(Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary) {
+void execute_assign_operation(Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary) {
 
     switch(op.type) {
     case OP_add:
@@ -208,6 +213,72 @@ void execute_operation(Command_Object object, Command_Operator op, Command_Objec
     }
 }
 
+double op_binary_value(Command_Object arg_unary, Command_Object arg_binary, double (*op_fun)(double, double), Lexer& lexer)
+{
+    if (arg_unary.type != OT_value) {
+	lexer.parsing_error(arg_unary.tkn, "Expected a value.");
+	return 0;
+    }
+    
+    if (arg_binary.type != OT_value) {
+	lexer.parsing_error(arg_binary.tkn, "Expected a value.");
+	return 0;
+    }
+
+    double a1 = 0;
+    if (arg_unary.tkn.type == tkn_int)
+	a1 = arg_unary.tkn.i;
+    else if (arg_unary.tkn.type == tkn_real)
+	a1 = arg_unary.tkn.d;
+
+    double a2 = 0;
+    if (arg_binary.tkn.type == tkn_int)
+	a2 = arg_binary.tkn.i;
+    else if (arg_binary.tkn.type == tkn_real)
+	a2 = arg_binary.tkn.d;
+
+    return op_fun(a1, a2);
+}
+
+double execute_operation_value(Command_Operator op, Command_Object arg_unary, Command_Object arg_binary, Lexer& lexer) {
+
+    switch(op.type) {
+    case OP_add:
+	return op_binary_value(arg_unary, arg_binary, add_op, lexer);
+	break;
+    case OP_sub:
+	return op_binary_value(arg_unary, arg_binary, sub_op, lexer);
+	break;
+    case OP_mul:
+	return op_binary_value(arg_unary, arg_binary, mul_op, lexer);
+	break;
+    case OP_div:
+	return op_binary_value(arg_unary, arg_binary, div_op, lexer);
+	break;
+    default:
+	lexer.parsing_error(op.tkn, "This operation is not supported for values.");
+	return 0;
+    }
+}
+
+void print_unary(Command_Object arg_unary, Lexer& lexer)
+{
+    if (arg_unary.type == OT_value) {
+	if (arg_unary.tkn.type == tkn_int)
+	    std::cout << arg_unary.tkn.i << '\n';
+	else if (arg_unary.tkn.type == tkn_real)
+	    std::cout << arg_unary.tkn.d << '\n';
+    }
+    else {
+	lexer.parsing_error(arg_unary.tkn, "Expected a number.");
+    }
+}
+
+void print_op_binary(Command_Operator op, Command_Object arg_unary, Command_Object arg_binary, Lexer& lexer)
+{
+    std::cout << execute_operation_value(op, arg_unary, arg_binary, lexer) << '\n';
+}
+
 void handle_command(Data_Manager &data_manager)
 {
     if (IsKeyPressed(KEY_ENTER)) {
@@ -216,27 +287,65 @@ void handle_command(Data_Manager &data_manager)
 	Lexer lexer;
 	lexer.load_input_from_string(cmd);
 
-	Command_Object object = get_command_object(data_manager, lexer);
+	
+	if (!expect_next_token(lexer))
+	    return;
+
+	Command_Object object, arg_unary, arg_binary;
+
+	// = expression (print expression)
+ 	Command_Operator op = get_command_operator(lexer);
+	if (op.type == OP_assign) {
+	    if (!expect_next_token(lexer))
+		return;
+	    arg_unary = get_command_object(data_manager, lexer);
+	    if (arg_unary.is_undefined()) {
+		lexer.parsing_error(lexer.tkn, "Expected at least one argument.");
+		return;
+	    }
+	    if (!expect_next_token(lexer))
+		return;
+	    op = get_command_operator(lexer);
+	    if (op.is_undefined()) {
+		print_unary(arg_unary, lexer);
+		return;
+	    }
+	    else {
+		if (!expect_next_token(lexer))
+		    return;
+		arg_binary = get_command_object(data_manager, lexer);
+		if (arg_binary.is_undefined()) {
+		    lexer.parsing_error(lexer.tkn, "Expected another argument.");
+		    return;
+		}
+		print_op_binary(op, arg_unary, arg_binary, lexer);
+	    }
+	    return;
+	}
+
+	// object = expression (assign expression to object)
+	object = get_command_object(data_manager, lexer);
 	if (object.is_undefined())
 	    return;
-	
-	// if (!expect_next_token(lexer))
-	//     return;
-	// // expect an assignment
-	// if (lexer.tkn.type != '=') {
-	//     lexer.parsing_error(lexer.tkn, "Expected '='.");
-	//     return;
-	// }
-	
-	Command_Operator op = get_command_operator(lexer);
-	if (op.type == OP_assign)
+
+	if (!expect_next_token(lexer))
+	    return;
+
+	op = get_command_operator(lexer);
+	if (op.type == OP_assign) {
+	    if (!expect_next_token(lexer))
+		return;
 	    op = get_command_operator(lexer);
+	}
 	if (op.is_undefined()) {
 	    op.type = OP_assign;
 	}
-	   
-	Command_Object arg_unary, arg_binary;
+
+	
+
 	if (op_arg_cnt_table[op.type] >= 1) {
+	    if (!expect_next_token(lexer))
+		return;
 	    arg_unary = get_command_object(data_manager, lexer);
 	    if (arg_unary.is_undefined()) {
 		lexer.parsing_error(lexer.tkn, "Expected a unary argument for the operator '%s'.", operator_type_name_table[op.type]);
@@ -244,6 +353,8 @@ void handle_command(Data_Manager &data_manager)
 	    }
 	}
 	if (op_arg_cnt_table[op.type] >= 2) {
+	    if (!expect_next_token(lexer))
+		return;
 	    arg_binary = get_command_object(data_manager, lexer);
 	    if (arg_unary.is_undefined()) {
 		lexer.parsing_error(lexer.tkn, "Expected a unary argument for the operator '%s'.", operator_type_name_table[op.type]);
@@ -251,6 +362,6 @@ void handle_command(Data_Manager &data_manager)
 	    }
 	}
 
-	execute_operation(object, op, arg_unary, arg_binary);
+	execute_assign_operation(object, op, arg_unary, arg_binary);
     }
 }
