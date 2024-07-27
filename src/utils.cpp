@@ -152,7 +152,7 @@ std::vector<Plot_Data*> parse_numeric_csv_file(std::string file_name)
 		}
 		fix_comma_notation(inside_string, p);
 	    }
-	    data_list[data_column]->header += std::string(begin, p - begin);
+	    data_list[data_column]->info.header += std::string(begin, p - begin);
 	    ++p;
 	}
     }

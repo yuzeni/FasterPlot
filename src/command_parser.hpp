@@ -8,6 +8,14 @@ enum Object_Type
     OT_plot_data,
     OT_function,
     OT_value,
+    OT_SIZE, 
+};
+
+inline const char *object_type_name_table[OT_SIZE] {
+    "undefined",
+    "plot_data",
+    "function",
+    "value",
 };
 
 struct Plot_Data;
@@ -35,7 +43,10 @@ enum Operator_Type {
     OP_update_mul,
     OP_update_div,
     OP_assign,
-    OP_SIZE
+    OP_smooth,
+    OP_interp,
+    OP_fit,
+    OP_SIZE,
 };
 
 inline const char *operator_type_name_table[OP_SIZE] {
@@ -49,9 +60,13 @@ inline const char *operator_type_name_table[OP_SIZE] {
     "update_mul",
     "update_div",
     "assign",
+    "smooth",
+    "interp",
+    "fit",
 };
 
 inline int op_arg_cnt_table[OP_SIZE] {
+    0,
     2,
     2,
     2,
@@ -61,6 +76,9 @@ inline int op_arg_cnt_table[OP_SIZE] {
     1,
     1,
     1,
+    2,
+    2,
+    2,
 };
 
 struct Command_Operator

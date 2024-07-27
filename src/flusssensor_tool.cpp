@@ -4,7 +4,6 @@
 
 #include <cmath>
 #include <cstdio>
-#include <random>
 #include <vector>
 #include <string>
 #include <cstdint>
@@ -66,66 +65,46 @@ static void draw_vp_camera_coordinate_system(VP_Camera camera, int target_spacin
     }
 }
 
-void draw_data(VP_Camera& camera, std::vector<Plot_Data*> data_list, Vec2<int> plot_padding)
+void Data_Manager::draw_plot_data()
 {
-    if (camera.is_undefined()) {
-
-	double max_x = 0;
-	double min_x = 0;
-	double max_y = 0;
-	double min_y = 0;
-	
-	for(const auto& dp : data_list) {
-	    if (!dp->x)
-		continue;
-	    for(double val : dp->x->y) {
-		max_x = val > max_x ? val : max_x;
-		min_x = val < min_x ? val : min_x;
-	    }
-	    for(double val : dp->y) {
-		max_y = val > max_y ? val : max_y;
-		min_y = val < min_y ? val : min_y;
-	    }
-	}
-	camera.coord_sys.basis_x = { double(g_screen_width - plot_padding.x * 2) / (max_x - min_x), 0 };
-	camera.coord_sys.basis_y = { 0 , -double(g_screen_height - plot_padding.y * 2) / (max_y - min_y)};
-	// TODO: move camera origin to the right place
-    }
-
-    // draw the coordinate system
-    draw_vp_camera_coordinate_system(camera, COORDINATE_SYSTEM_GRID_SPACING);
-
     // draw the plot
-    for(const auto& dp : data_list) {
-	if (!dp->x)
+    for(const auto& pd : plot_data) {
+	if (!pd->x)
 	    continue;
-	for(size_t ix = 0; ix < std::min(dp->y.size(), dp->x->y.size()); ++ix) {
-	    Vec2<double> screen_space_point = camera.coord_sys.transform_to(Vec2<double>{dp->x->y[ix], dp->y[ix]} + camera.origin_offset, app_coordinate_system);
+	for(size_t ix = 0; ix < pd->size(); ++ix) {
+	    Vec2<double> screen_space_point = camera.coord_sys.transform_to(Vec2<double>{pd->x->y[ix], pd->y[ix]} + camera.origin_offset, app_coordinate_system);
 	    Vec2<double> prev_screen_space_point;
-	    if(dp->plot_type & PT_DISCRETE) {
-		DrawCircle(std::round(screen_space_point.x), std::round(screen_space_point.y), dp->thickness / 2.f, dp->color);
+	    if(pd->info.plot_type & PT_DISCRETE) {
+		DrawCircle(std::round(screen_space_point.x), std::round(screen_space_point.y), pd->info.thickness / 2.f, pd->info.color);
 	    }
-	    if(dp->plot_type & PT_INTERP_LINEAR) {
+	    if(pd->info.plot_type & PT_INTERP_LINEAR) {
 		if(ix > 0)
-		    DrawLineEx(prev_screen_space_point, screen_space_point, dp->thickness / 3.f, dp->color);
+		    DrawLineEx(prev_screen_space_point, screen_space_point, pd->info.thickness / 3.f, pd->info.color);
 	    }
 	    prev_screen_space_point = screen_space_point;
 	}
 
-	if(dp->periodic_fit.is_defined()) {
-	    for(size_t ix = 0; ix < std::min(dp->y.size(), dp->x->y.size()); ++ix) {
-		Vec2<double> screen_space_point = camera.coord_sys.transform_to(Vec2<double>{dp->x->y[ix], dp->periodic_fit(dp->x->y[ix])} + camera.origin_offset,
-										app_coordinate_system);
-		Vec2<double> prev_screen_space_point;
-		if(dp->plot_type & PT_DISCRETE) {
-		    DrawCircle(std::round(screen_space_point.x), std::round(screen_space_point.y), dp->thickness / 2.f, dp->color);
-		}
-		if(dp->plot_type & PT_INTERP_LINEAR) {
-		    if(ix > 0)
-			DrawLineEx(prev_screen_space_point, screen_space_point, dp->thickness / 3.f, dp->color);
-		}
-		prev_screen_space_point = screen_space_point;
+
+    }
+}
+
+void Data_Manager::draw_functions()
+{
+    for(const auto& func : functions) {
+	if (!func->is_defined() || !func->x)
+	    continue;
+	for(size_t ix = 0; ix < func->size(); ++ix) {
+	    Vec2<double> screen_space_point = camera.coord_sys.transform_to(Vec2<double>{func->x->y[ix], func->operator()(func->x->y[ix])} + camera.origin_offset,
+									    app_coordinate_system);
+	    Vec2<double> prev_screen_space_point;
+	    if(func->info.plot_type & PT_DISCRETE) {
+		DrawCircle(std::round(screen_space_point.x), std::round(screen_space_point.y), func->info.thickness / 2.f, func->info.color);
 	    }
+	    if(func->info.plot_type & PT_INTERP_LINEAR) {
+		if(ix > 0)
+		    DrawLineEx(prev_screen_space_point, screen_space_point, func->info.thickness / 3.f, func->info.color);
+	    }
+	    prev_screen_space_point = screen_space_point;
 	}
     }
 }
@@ -142,22 +121,35 @@ Data_Manager::~Data_Manager()
     for (auto f : functions)
 	delete f;
 }
-    
 
-void Data_Manager::add_data(std::string file)
+void Data_Manager::new_plot_data(Plot_Data* data)
 {
-    static int graph_color_array_idx = 0;
+    if (data)
+	plot_data.push_back(data);
+    else
+	plot_data.push_back(new Plot_Data);
+    plot_data.back()->x = &default_x;
+    plot_data.back()->info.color = graph_color_array[graph_color_array_idx];
+    ++graph_color_array_idx;
+    if (graph_color_array_idx >= graph_color_array_cnt)
+	graph_color_array_idx = 0;	
+}
+
+void Data_Manager::new_function()
+{
+    functions.push_back(new Function);
+    functions.back()->x = &default_x;
+    functions.back()->info.color = graph_color_array[graph_color_array_idx];
+    ++graph_color_array_idx;
+    if (graph_color_array_idx >= graph_color_array_cnt)
+	graph_color_array_idx = 0;	
+}
+    
+void Data_Manager::add_plot_data(std::string file)
+{
     std::vector<Plot_Data*> data_list = parse_numeric_csv_file(file);
     for(const auto data : data_list) {
-	plot_data.push_back(data);
-	plot_data.back()->color = graph_color_array[graph_color_array_idx];
-	if(plot_data.size() > 1) {
-	    plot_data.back()->x = plot_data[0];
-	    plot_data.back()->periodic_fit.fit_to_data(plot_data.back());
-	}
-	++graph_color_array_idx;
-	if (graph_color_array_idx >= graph_color_array_cnt)
-	    graph_color_array_idx = 0;
+	new_plot_data(data);
     }
 }
 
@@ -165,10 +157,34 @@ void Data_Manager::draw()
 {
     if (plot_data.empty())
 	return;
-	
+
     static int old_g_screen_height = g_screen_height;
     camera.coord_sys.origin.y += g_screen_height - old_g_screen_height;
     old_g_screen_height = g_screen_height;
+
+    // update default x
+    size_t max_x = 0;
+    for (const auto pd : plot_data) {
+	max_x = pd->y.size() > max_x ? pd->y.size() : max_x;
+    }
+
+    if (default_x.y.size() != max_x) {
+	default_x.y.resize(max_x);
+	for (size_t i = 0; i < default_x.y.size(); ++i)
+	    default_x.y[i] = i;
+    }
+
+    if (camera.is_undefined())
+	fit_camera_to_plot();
+    
+    // double required_size = app_coordinate_system.transform_to(Vec2<double>{double(g_screen_width), 0}, camera.coord_sys).x
+    // 	- app_coordinate_system.transform_to(Vec2<double>{0, 0}, camera.coord_sys).x;
+    // if (required_size > default_x.y.size()) {
+    // 	default_x.y.resize(required_size * 1.25);
+    // 	for (int i = 0; i < default_x.size(); ++i)
+    // 	    default_x.y[i] = i;
+    // }
+
 
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
 	DisableCursor();
@@ -195,24 +211,63 @@ void Data_Manager::draw()
 	camera.coord_sys.origin = camera.coord_sys.origin - camera.origin_offset * normalize;
 		
     }
-
+    
     if (IsKeyPressed(KEY_SPACE)) {
 	Vec2<double> normalize = Vec2<double>{camera.coord_sys.basis_x.length(), -camera.coord_sys.basis_y.length()};
 	camera.coord_sys.origin = camera.coord_sys.origin + camera.origin_offset * normalize;
 	camera.origin_offset = {0, 0};
 	camera.coord_sys.origin = {double(plot_padding.x), double(g_screen_height - plot_padding.y)};
-	camera.coord_sys.basis_x = {0, 0};
-	camera.coord_sys.basis_y = {0, 0};
+	fit_camera_to_plot();
     }
 
-    draw_data(camera, plot_data, plot_padding);
+    draw_vp_camera_coordinate_system(camera, COORDINATE_SYSTEM_GRID_SPACING);
+    draw_plot_data();
+    draw_functions();
+}
+
+void Data_Manager::fit_camera_to_plot()
+{
+    double max_x = 0;
+    double min_x = 0;
+    double max_y = 0;
+    double min_y = 0;
+	
+    for(const auto& pd : plot_data) {
+	if (!pd->x)
+	    continue;
+	for(double val : pd->x->y) {
+	    max_x = val > max_x ? val : max_x;
+	    min_x = val < min_x ? val : min_x;
+	}
+	for(double val : pd->y) {
+	    max_y = val > max_y ? val : max_y;
+	    min_y = val < min_y ? val : min_y;
+	}
+    }
+
+    for(const auto& func : functions) {
+	if (!func->x)
+	    continue;
+	for(double val : func->x->y) {
+	    max_x = val > max_x ? val : max_x;
+	    min_x = val < min_x ? val : min_x;
+	    double func_y = func->operator()(val);
+	    max_y = func_y > max_x ? func_y : max_x;
+	    min_y = func_y < min_x ? func_y : min_x;
+	}
+    }
+    
+    camera.coord_sys.basis_x = { double(g_screen_width - plot_padding.x * 2) / (max_x - min_x), 0 };
+    camera.coord_sys.basis_y = { 0 , -double(g_screen_height - plot_padding.y * 2) / (max_y - min_y)};
+    
+    // TODO: move camera origin to the right place
 }
     
 bool load_dropped_files(Data_Manager& fluss_daten) {
     if (IsFileDropped()) {
 	FilePathList path_list = LoadDroppedFiles();
 	for(uint32_t i = 0; i < path_list.count; ++i)
-	    fluss_daten.add_data(path_list.paths[i]);
+	    fluss_daten.add_plot_data(path_list.paths[i]);
 	UnloadDroppedFiles(path_list);
 	return true;
     }

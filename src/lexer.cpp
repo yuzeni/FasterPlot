@@ -27,12 +27,20 @@ static const char *token_name_table[tkn_SIZE - 256]{
     "int",
     "real",
     "string",
+    "true",
+    "false",
 
     "fit",
     "sinusoid",
     "data",
     "function",
     "new",
+    "points",
+    "lines",
+    "x",
+    "hide",
+    "smooth",
+    "interp",
     
     "+=",
     "-=",
@@ -69,11 +77,19 @@ Token_enum keyword_compare(const std::string_view sv)
 	return tkn_ident;
 
     switch(hash_string_view(sv)) {
+    case cte_hash_c_str("true"): return tkn_true;
+    case cte_hash_c_str("false"): return tkn_false;
     case cte_hash_c_str("fit"): return tkn_fit;
     case cte_hash_c_str("sinusoid"): return tkn_sinusoid;
     case cte_hash_c_str("data"): return tkn_data;
     case cte_hash_c_str("function"): return tkn_function;
     case cte_hash_c_str("new"): return tkn_new;
+    case cte_hash_c_str("points"): return tkn_points;
+    case cte_hash_c_str("lines"): return tkn_lines;
+    case cte_hash_c_str("x"): return tkn_x;
+    case cte_hash_c_str("hide"): return tkn_hide;
+    case cte_hash_c_str("smooth"): return tkn_smooth;
+    case cte_hash_c_str("interp"): return tkn_interp;
     default: return tkn_ident;
     }
 }

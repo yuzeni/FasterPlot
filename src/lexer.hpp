@@ -20,6 +20,8 @@ enum Token_enum : uint32_t {
     tkn_int,
     tkn_real,
     tkn_string,
+    tkn_true, // add
+    tkn_false, // add
 
     /* keywords */
     tkn_fit,
@@ -27,6 +29,13 @@ enum Token_enum : uint32_t {
     tkn_data,
     tkn_function,
     tkn_new,
+    tkn_points, // add // data 1 points = true
+    tkn_lines, // add
+    tkn_x, // add // data 1 x = data 0
+    tkn_hide, // add // data 1 hide = true
+    tkn_smooth, // smooth data 1, 10
+    tkn_interp, // interp data 1, 1.3
+    
 
     /* mutliple char operators */
 
@@ -41,6 +50,7 @@ enum Token_enum : uint32_t {
     tkn_SIZE,
 };
 
+std::string get_token_name_str(Token_enum tkn);
 
 struct Token {
     Token() {}
