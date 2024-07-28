@@ -139,6 +139,9 @@ static Command_Operator get_command_operator(Token tkn)
     case tkn_show:
 	op.type = OP_show;
 	break;
+    case tkn_extrema:
+	op.type = OP_extrema;
+	break;
     }
     return op;
 }
@@ -211,7 +214,7 @@ void op_unary_assign(Command_Object object, Command_Object arg_unary)
 void op_fit_assign(Lexer& lexer, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary) {
 
     if (object.type != OT_function) {
-	lexer.parsing_error(object.tkn, "Expected object '%s'.", object_type_name_table[object.type]);
+	lexer.parsing_error(object.tkn, "Expected function, but got '%s'.", object_type_name_table[object.type]);
 	return;
     }
 
@@ -233,7 +236,31 @@ void op_fit_assign(Lexer& lexer, Command_Object object, Command_Operator op, Com
     }
 }
 
-void execute_assign_operation(Lexer& lexer, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary) {
+void op_extrema_assign(Lexer& lexer, Data_Manager& data_manager, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary) {
+
+    if (object.type != OT_plot_data) {
+	lexer.parsing_error(object.tkn, "Expected data, but got '%s'.", object_type_name_table[object.type]);
+	return;
+    }
+
+    if (arg_unary.type != OT_plot_data) {
+	lexer.parsing_error(arg_unary.tkn, "Expected data, but got '%s'.", object_type_name_table[arg_unary.type]);
+	return;
+    }    
+
+    if (arg_binary.type != OT_value || arg_binary.tkn.type != tkn_int) {
+	lexer.parsing_error(arg_binary.tkn, "The argument type '%s' is not supported by the operation '%s'",
+			    get_token_name_str(arg_binary.tkn.type).c_str(), operator_type_name_table[op.type]);
+	return;
+    }
+
+    data_manager.new_plot_data();
+    object.obj.plot_data->x = data_manager.plot_data.back();
+    
+    get_extrema_plot_data(object.obj.plot_data, arg_unary.obj.plot_data, arg_binary.tkn.i);
+}
+
+void execute_assign_operation(Lexer& lexer, Data_Manager& data_manager, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary) {
 
     switch(op.type) {
     case OP_add:
@@ -265,6 +292,9 @@ void execute_assign_operation(Lexer& lexer, Command_Object object, Command_Opera
 	break;
     case OP_fit:
 	op_fit_assign(lexer, object, op, arg_unary, arg_binary);
+	break;
+    case OP_extrema:
+	op_extrema_assign(lexer, data_manager, object, op, arg_unary, arg_binary);
 	break;
     }
 }
@@ -347,120 +377,119 @@ static Command_Object expect_command_object(Data_Manager& data_manager, Lexer& l
     return arg;
 }
 
-void handle_command(Data_Manager &data_manager)
+void handle_command(Data_Manager &data_manager, std::string cmd)
 {
-    if (IsKeyPressed(KEY_ENTER)) {
-	std::string cmd;
-	std::getline(std::cin, cmd);
-	Lexer lexer;
-	lexer.load_input_from_string(cmd);
-
+    // if (IsKeyPressed(KEY_ENTER)) {
+	// std::string cmd;
+	// std::getline(std::cin, cmd);
+    Lexer lexer;
+    lexer.load_input_from_string(cmd);
 	
+    if (!expect_next_token(lexer))
+	return;
+
+    Command_Object object, arg_unary, arg_binary;
+
+    // = expression (print expression)
+    Command_Operator op = get_command_operator(lexer.tkn);
+    switch(op.type) {
+    case OP_assign:
+	arg_unary = expect_command_object(data_manager, lexer);
+	if (arg_unary.is_undefined())
+	    return;
+	    
 	if (!expect_next_token(lexer))
 	    return;
-
-	Command_Object object, arg_unary, arg_binary;
-
-	// = expression (print expression)
- 	Command_Operator op = get_command_operator(lexer.tkn);
-	switch(op.type) {
-	case OP_assign:
-	    arg_unary = expect_command_object(data_manager, lexer);
-	    if (arg_unary.is_undefined())
-		return;
-	    
-	    if (!expect_next_token(lexer))
-		return;
-	    op = get_command_operator(lexer.tkn);
-	    if (op.is_undefined()) {
-		print_unary(arg_unary, lexer);
-		return;
-	    }
-	    else {
-		arg_binary = expect_command_object(data_manager, lexer);
-		if (arg_binary.is_undefined())
-		    return;
-		print_op_binary(op, arg_unary, arg_binary, lexer);
-	    }
+	op = get_command_operator(lexer.tkn);
+	if (op.is_undefined()) {
+	    print_unary(arg_unary, lexer);
 	    return;
-	case OP_smooth:
-	case OP_interp:
-	    arg_unary = expect_command_object(data_manager, lexer);
-	    if (arg_unary.is_undefined())
-		return;
-
-	    if (arg_unary.type != OT_plot_data) {
-		lexer.parsing_error(lexer.tkn, "Expected data, but got '%s'.", object_type_name_table[arg_unary.type]);
-		return;
-	    }
-	    
+	}
+	else {
 	    arg_binary = expect_command_object(data_manager, lexer);
 	    if (arg_binary.is_undefined())
 		return;
-	    if (arg_binary.type != OT_value || arg_binary.tkn.type != tkn_int) {
-		lexer.parsing_error(lexer.tkn, "Expected an integer value, but got '%s' '%s'.",
-				    object_type_name_table[arg_unary.type], get_token_name_str(arg_binary.tkn.type).c_str());
-		return;
-	    }
-
-	    if (op.type == OP_smooth) {
-		if (!smooth_plot_data(arg_unary.obj.plot_data, arg_binary.tkn.i))
-		    lexer.parsing_error(op.tkn, "Error occured trying to smooth the data, perhaps X or Y were empty.");
-	    }
-	    else if (op.type == OP_interp) {
-		if (!interp_plot_data(data_manager, arg_unary.obj.plot_data, arg_binary.tkn.i))
-		    lexer.parsing_error(op.tkn, "Error occured trying to interpolate the data, perhaps X or Y were empty.");
-	    }
+	    print_op_binary(op, arg_unary, arg_binary, lexer);
+	}
+	return;
+    case OP_smooth:
+    case OP_interp:
+	arg_unary = expect_command_object(data_manager, lexer);
+	if (arg_unary.is_undefined())
 	    return;
-	case OP_show:
-	case OP_hide:
-	    arg_unary = expect_command_object(data_manager, lexer);
-	    if (arg_unary.is_undefined())
-		return;
-	    if (arg_unary.type != OT_plot_data && arg_unary.type != OT_function) {
-		lexer.parsing_error(lexer.tkn, "Expected data or function, but got '%s'.", object_type_name_table[arg_unary.type]);
-		return;
-	    }
 
-	    if (arg_unary.type == OT_plot_data)
-		arg_unary.obj.plot_data->info.visible = op.type == OP_show ? true : false;
-	    else if (arg_unary.type == OT_function)
-		arg_unary.obj.function->info.visible = op.type == OP_show ? true : false;
+	if (arg_unary.type != OT_plot_data) {
+	    lexer.parsing_error(lexer.tkn, "Expected data, but got '%s'.", object_type_name_table[arg_unary.type]);
+	    return;
+	}
+	    
+	arg_binary = expect_command_object(data_manager, lexer);
+	if (arg_binary.is_undefined())
+	    return;
+	if (arg_binary.type != OT_value || arg_binary.tkn.type != tkn_int) {
+	    lexer.parsing_error(lexer.tkn, "Expected an integer value, but got '%s' '%s'.",
+				object_type_name_table[arg_unary.type], get_token_name_str(arg_binary.tkn.type).c_str());
 	    return;
 	}
 
-	// object = expression (assign expression to object)
-	object = get_command_object(data_manager, lexer);
-	if (object.is_undefined()) {
-	    lexer.parsing_error(object.tkn, "Undefined object.");
+	if (op.type == OP_smooth) {
+	    if (!smooth_plot_data(arg_unary.obj.plot_data, arg_binary.tkn.i))
+		lexer.parsing_error(op.tkn, "Error occured trying to smooth the data, perhaps X or Y were empty.");
+	}
+	else if (op.type == OP_interp) {
+	    if (!interp_plot_data(data_manager, arg_unary.obj.plot_data, arg_binary.tkn.i))
+		lexer.parsing_error(op.tkn, "Error occured trying to interpolate the data, perhaps X or Y were empty.");
+	}
+	return;
+    case OP_show:
+    case OP_hide:
+	arg_unary = expect_command_object(data_manager, lexer);
+	if (arg_unary.is_undefined())
+	    return;
+	if (arg_unary.type != OT_plot_data && arg_unary.type != OT_function) {
+	    lexer.parsing_error(lexer.tkn, "Expected data or function, but got '%s'.", object_type_name_table[arg_unary.type]);
 	    return;
 	}
 
+	if (arg_unary.type == OT_plot_data)
+	    arg_unary.obj.plot_data->info.visible = op.type == OP_show ? true : false;
+	else if (arg_unary.type == OT_function)
+	    arg_unary.obj.function->info.visible = op.type == OP_show ? true : false;
+	return;
+    }
+
+    // object = expression (assign expression to object)
+    object = get_command_object(data_manager, lexer);
+    if (object.is_undefined()) {
+	lexer.parsing_error(object.tkn, "Undefined object.");
+	return;
+    }
+
+    if (!expect_next_token(lexer))
+	return;
+
+    op = get_command_operator(lexer.tkn);
+    if (get_command_operator(lexer.next_tkn).type != OP_undefined) {
 	if (!expect_next_token(lexer))
 	    return;
-
 	op = get_command_operator(lexer.tkn);
-	if (get_command_operator(lexer.next_tkn).type != OP_undefined) {
-	    if (!expect_next_token(lexer))
-		return;
-	    op = get_command_operator(lexer.tkn);
-	}
-
-	if (op_arg_cnt_table[op.type] >= 1) {
-	    arg_unary = expect_command_object(data_manager, lexer);
-	    if (arg_unary.is_undefined()) {
-		lexer.parsing_error(arg_unary.tkn, "Undefined object.");
-		return;
-	    }
-	}
-	if (op_arg_cnt_table[op.type] >= 2) {
-	    arg_binary = expect_command_object(data_manager, lexer);
-	    if (arg_binary.is_undefined()) {
-		lexer.parsing_error(arg_unary.tkn, "Undefined object.");
-		return;
-	    }
-	}
-
-	execute_assign_operation(lexer, object, op, arg_unary, arg_binary);
     }
+
+    if (op_arg_cnt_table[op.type] >= 1) {
+	arg_unary = expect_command_object(data_manager, lexer);
+	if (arg_unary.is_undefined()) {
+	    lexer.parsing_error(arg_unary.tkn, "Undefined object.");
+	    return;
+	}
+    }
+    if (op_arg_cnt_table[op.type] >= 2) {
+	arg_binary = expect_command_object(data_manager, lexer);
+	if (arg_binary.is_undefined()) {
+	    lexer.parsing_error(arg_unary.tkn, "Undefined object.");
+	    return;
+	}
+    }
+
+    execute_assign_operation(lexer, data_manager, object, op, arg_unary, arg_binary);
+
 }

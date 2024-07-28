@@ -15,7 +15,6 @@ enum Token_enum : uint32_t {
     tkn_parse_error,
     
     /* literals */
-
     tkn_ident,
     tkn_int,
     tkn_real,
@@ -29,17 +28,16 @@ enum Token_enum : uint32_t {
     tkn_data,
     tkn_function,
     tkn_new,
-    tkn_points, // add // data 1 points = true
-    tkn_lines, // add
-    tkn_x, // add // data 1 x = data 0
+    tkn_points, // add // show points data 1
+    tkn_lines, // add // hide lines data 1
+    tkn_x,
     tkn_show,
-    tkn_hide, // add // hide data 1
-    tkn_smooth, // smooth data 1, 10
-    tkn_interp, // interp data 1, 1.3
-    
+    tkn_hide,
+    tkn_smooth,
+    tkn_interp,
+    tkn_extrema, // data new = extrema data 1 10
 
     /* mutliple char operators */
-
     tkn_update_add,
     tkn_update_sub,
     tkn_update_mul,
@@ -55,8 +53,9 @@ std::string get_token_name_str(Token_enum tkn);
 
 struct Token {
     Token() {}
-    Token(Token_enum type, char* ptr, void* data = nullptr);
+    Token(Token_enum type, char* ptr, char* ptr_end, void* data = nullptr);
     char* ptr = nullptr;
+    ptrdiff_t size = 0;
     uint32_t flag = 0;
     Token_enum type = tkn_none;
     union {
@@ -92,7 +91,7 @@ public:
 	
 	char buffer[1024];
 	snprintf(buffer, 1024, msg, args...);
-	log_error("%s\n%s\n", buffer, error_section.c_str());
+	log_error("%s\n%s", buffer, error_section.c_str());
 	++error_cnt;
     }
 
@@ -101,6 +100,8 @@ public:
 
     Token tkn;
     Token next_tkn;
+
+    const std::string& get_input() const { return input; }
 
 private:
 

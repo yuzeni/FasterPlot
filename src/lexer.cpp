@@ -5,11 +5,8 @@
 #include <cstring>
 #include <iostream>
 #include <string>
-#include <algorithm>
 #include <optional>
 #include <string_view>
-#include <vector>
-#include <functional>
 
 #include "utils.hpp"
 
@@ -42,6 +39,7 @@ static const char *token_name_table[tkn_SIZE - 256]{
     "hide",
     "smooth",
     "interp",
+    "extrema",
     
     "+=",
     "-=",
@@ -92,6 +90,7 @@ Token_enum keyword_compare(const std::string_view sv)
     case cte_hash_c_str("hide"): return tkn_hide;
     case cte_hash_c_str("smooth"): return tkn_smooth;
     case cte_hash_c_str("interp"): return tkn_interp;
+    case cte_hash_c_str("extrema"): return tkn_extrema;
     default: return tkn_ident;
     }
 }
@@ -105,17 +104,12 @@ std::optional<Token> check_for_operator(char **p, char *eof, Token_enum type, co
 	if(op[i] != (*p)[i])
 	    return {};
     (*p) += strlen(op);
-    return Token{type, *p - i};
+    return Token{type, *p - i, *p};
 }
 
 static bool is_whitespace(char c)
 {
     return c == ' ' || c == '\n' || c == '\t' || c == '\f' || c == '\r' || c == '\v';
-}
-
-static bool is_new_line(char c)
-{
-    return c == '\n' || c == '\f' || c == '\r';
 }
 
 static bool is_alpha(char c)
@@ -159,8 +153,8 @@ bool is_delim_tkn_right(Token_enum type)
     return is_close_bracket(c) || c == ',';
 }
 
-Token::Token(Token_enum type, char *ptr, void *data)
-    : ptr(ptr), type(type), i(0)
+Token::Token(Token_enum type, char *ptr, char* ptr_end, void *data)
+    : ptr(ptr), size(ptr_end - ptr), type(type), i(0)
 {
     bool d_a = false;
     if (data) {
@@ -169,8 +163,12 @@ Token::Token(Token_enum type, char *ptr, void *data)
 	case tkn_string: d_a = true; sv = *reinterpret_cast<std::string_view*>(data); break;
 	case tkn_int:    d_a = true; i = *reinterpret_cast<int64_t*>(data); break;
 	case tkn_real:   d_a = true; d = *reinterpret_cast<double*>(data);  break;
+	default: log_error("The token '%s' does not support data.", get_token_name_str(type).c_str());
 	}
     }
+    
+    if(d_a && !data)
+	log_error("The data ptr for the token was empty");
 }
 
 void Lexer::load_input_from_string(std::string source)
@@ -200,7 +198,7 @@ bool Lexer::get_next_token()
     if (p == eof)
 	p = nullptr;
     if (!p)
-	return push(Token{tkn_eof, eof});
+	return push(Token{tkn_eof, eof, eof});
 	
     // skip whitespace and comments
     for (;;) {
@@ -234,7 +232,7 @@ bool Lexer::get_next_token()
 	while (p != eof && (is_alpha(*p) || *p == '_' || is_digit(*p)))
 	    ++p;
 	std::string_view sv(begin, p);
-	bool result = push(Token{tkn_ident, begin, &sv});
+	bool result = push(Token{tkn_ident, begin, p, &sv});
 	next_tkn.type = keyword_compare(next_tkn.sv);
 	return result;
     }
@@ -257,13 +255,13 @@ bool Lexer::get_next_token()
 	    double number = strtod(begin, &p);
 	    if(errno == ERANGE)
 		log_error("parsed number was out of range");
-	    return push(Token{tkn_real, begin, &number});
+	    return push(Token{tkn_real, begin, p, &number});
 	}
 	else {
 	    int64_t number = strtoll(begin, &p, 0);
 	    if(errno == ERANGE)
 		log_error("parsed number was out of range");
-	    return push(Token{tkn_int, begin, &number});
+	    return push(Token{tkn_int, begin, p, &number});
 	}
     }
     
@@ -275,7 +273,7 @@ bool Lexer::get_next_token()
 	    ++p;
 	std::string_view sv(begin, p);
 	++p;
-	return push(Token{tkn_string, begin, &sv});
+	return push(Token{tkn_string, begin, p, &sv});
     }
 
     // check for operators
@@ -288,10 +286,10 @@ bool Lexer::get_next_token()
     // check for all remaining single chars
     if (p < eof && is_simple_char(*p)) {
 	++p;
-	return push(Token{Token_enum(*(p-1)), p-1});
+	return push(Token{Token_enum(*(p-1)), p-1, p});
     }
 
-    if (p == eof) return push(Token{tkn_eof, eof});
+    if (p == eof) return push(Token{tkn_eof, eof, eof});
 
     // when stuck, just get the next token.
     parsing_error(next_tkn, "Failed to parse the character after this token.");

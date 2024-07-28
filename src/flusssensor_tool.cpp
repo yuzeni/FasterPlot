@@ -1,5 +1,6 @@
 #include "flusssensor_tool.hpp"
 
+#include "lexer.hpp"
 #include "raylib.h"
 
 #include <cmath>
@@ -12,27 +13,39 @@
 #include "utils.hpp"
 #include "command_parser.hpp"
 
+// app
 constexpr int SCREEN_WIDTH = 800;
 constexpr int SCREEN_HEIGHT = 600;
 constexpr int TARGET_FPS = 60;
-constexpr int COORDINATE_SYSTEM_GRID_SPACING = 60;
-constexpr int COORDINATE_SYSTEM_FONT_SIZE = 18;
-constexpr Color COORDINATE_SYSTEM_FONT_COLOR = Color{0, 0, 0, 150};
-constexpr Color COORDINATE_SYSTEM_MAIN_AXIS_COLOR = Color{0, 0, 0, 255};
-constexpr Color COORDINATE_SYSTEM_GRID_COLOR = Color{0, 0, 0, 75};
-// Raylibs screen coordinate system has the origin in the top left corner.
-// X points right and Y points down.
-constexpr Coordinate_System app_coordinate_system = {{0, 0}, {1, 0}, {0, 1}};
-
-constexpr Vec2<int> CONTENT_TREE_OFFSET {20, 20};
-constexpr int CONTENT_TREE_FONT_SIZE = 20;
-constexpr int CONTENT_TREE_HEADER_FONT_SIZE = 22;
-constexpr float CONTENT_TREE_VERTICAL_SPACING_MULTIPLIER = 1.05;
-constexpr int CONTENT_TREE_CHILD_X_OFFSET = 10;
-
 Font g_app_font_18;
 Font g_app_font_20;
 Font g_app_font_22;
+bool g_keyboard_lock = false;
+
+// coordinate system
+constexpr int COORDINATE_SYSTEM_GRID_SPACING = 60;
+constexpr int COORDINATE_SYSTEM_FONT_SIZE = 18;
+constexpr Font* COORDINATE_SYSTEM_FONT = &g_app_font_18;
+constexpr Color COORDINATE_SYSTEM_FONT_COLOR = Color{0, 0, 0, 150};
+constexpr Color COORDINATE_SYSTEM_MAIN_AXIS_COLOR = Color{0, 0, 0, 255};
+constexpr Color COORDINATE_SYSTEM_GRID_COLOR = Color{0, 0, 0, 75};
+constexpr Coordinate_System app_coordinate_system = {{0, 0}, {1, 0}, {0, 1}};
+
+// content tree
+constexpr Vec2<int> CONTENT_TREE_OFFSET {20, 20};
+constexpr int CONTENT_TREE_FONT_SIZE = 20;
+constexpr Font* CONTENT_TREE_FONT = &g_app_font_20;
+constexpr int CONTENT_TREE_HEADER_FONT_SIZE = 22;
+constexpr Font* CONTENT_TREE_HEADER_FONT = &g_app_font_22;
+constexpr float CONTENT_TREE_VERTICAL_SPACING_MULTIPLIER = 1.05;
+constexpr int CONTENT_TREE_CHILD_X_OFFSET = 10;
+
+// text input
+constexpr Vec2<int> TEXT_INPUT_OFFSET{20, 20};
+constexpr Font *TEXT_INPUT_FONT = &g_app_font_20;
+constexpr int TEXT_INPUT_FONT_SIZE = 20;
+constexpr float TEXT_INPUT_MIN_BOX_SIZE = 100;
+constexpr double TEXT_INPUT_CURSO_BLINK_TIME = 0.5; // in seconds
 
 void Plot_Data::update_content_tree_element(size_t index)
 {
@@ -47,6 +60,7 @@ void Plot_Data::update_content_tree_element(size_t index)
 	content_element.content.push_back({"X = "});
 	content_element.content.push_back({x->content_element.name, false, x->info.color});
     }
+    content_element.content.push_back({"size = " + std::to_string(y.size())});
 }
 
 void Function::update_content_tree_element(size_t index)
@@ -82,7 +96,7 @@ static Vector2 draw_and_check_text_boxed(Font font, const char *text, Vector2 po
 static Vector2 draw_text_boxed(Font font, const char *text, Vector2 position, float fontSize, float spacing, Color tint)
 {
     Vector2 size = MeasureTextEx(font, text, fontSize, spacing);
-    DrawRectangleV({position.x - 3, position.y - 3}, {size.x + 3, size.y + 3}, {255, 255, 255, 255});
+    DrawRectangleV({position.x - 3.f, position.y - 3.f}, {size.x + 3.f, size.y + 3.f}, {255, 255, 255, 255});
     DrawTextEx(font, text, position, fontSize, spacing, tint);
     return size;
 }
@@ -123,12 +137,12 @@ void Content_Tree::draw()
 {
     Vec2<int> draw_pos = CONTENT_TREE_OFFSET;
 
-    draw_element(draw_pos, &base_element, CONTENT_TREE_HEADER_FONT_SIZE, g_app_font_22);
+    draw_element(draw_pos, &base_element, CONTENT_TREE_HEADER_FONT_SIZE, *CONTENT_TREE_HEADER_FONT);
     draw_pos.x += CONTENT_TREE_CHILD_X_OFFSET;
 
     if (base_element.open) {
 	for(const auto elem : content_elements)
-	    draw_element(draw_pos, elem, CONTENT_TREE_FONT_SIZE, g_app_font_20);
+	    draw_element(draw_pos, elem, CONTENT_TREE_FONT_SIZE, *CONTENT_TREE_FONT);
     }
 }
 
@@ -152,10 +166,10 @@ static void draw_vp_camera_coordinate_system(VP_Camera camera, int target_spacin
 	
 	snprintf(text_buffer, 64, "%.4g", (t_grid_base_x.length() * double(i)) / camera.coord_sys.basis_x.length() - camera.origin_offset.x);
 	Vec2<double> text_pos = t_origin + t_grid_base_x * double(i);
-	DrawTextEx(g_app_font_18, text_buffer, Vector2{float(text_pos.x), float(text_pos.y)}, COORDINATE_SYSTEM_FONT_SIZE, 0, COORDINATE_SYSTEM_FONT_COLOR);
+	DrawTextEx(*COORDINATE_SYSTEM_FONT, text_buffer, Vector2{float(text_pos.x), float(text_pos.y)}, COORDINATE_SYSTEM_FONT_SIZE, 0, COORDINATE_SYSTEM_FONT_COLOR);
 	snprintf(text_buffer, 64, "%.4g", (t_grid_base_y.length() * double(i)) / camera.coord_sys.basis_y.length() - camera.origin_offset.y);
 	text_pos = t_origin + t_grid_base_y * (double(i) + double(i == 0 ? 0.25 : 0));
-	DrawTextEx(g_app_font_18, text_buffer, Vector2{float(text_pos.x), float(text_pos.y)}, COORDINATE_SYSTEM_FONT_SIZE, 0, COORDINATE_SYSTEM_FONT_COLOR);
+	DrawTextEx(*COORDINATE_SYSTEM_FONT, text_buffer, Vector2{float(text_pos.x), float(text_pos.y)}, COORDINATE_SYSTEM_FONT_SIZE, 0, COORDINATE_SYSTEM_FONT_COLOR);
     }
 }
 
@@ -297,7 +311,7 @@ void Data_Manager::draw()
 		
     }
     
-    if (IsKeyPressed(KEY_SPACE)) {
+    if (IsKeyPressed(KEY_SPACE) && !g_keyboard_lock) {
 	Vec2<double> normalize = Vec2<double>{camera.coord_sys.basis_x.length(), -camera.coord_sys.basis_y.length()};
 	camera.coord_sys.origin = camera.coord_sys.origin + camera.origin_offset * normalize;
 	camera.origin_offset = {0, 0};
@@ -353,7 +367,119 @@ void Data_Manager::fit_camera_to_plot()
     
     // TODO: move camera origin to the right place
 }
-    
+
+void Text_Input::tokenize_input()
+{
+    lexer = Lexer{};
+    lexer.load_input_from_string(input);
+    tokens.clear();
+    while(lexer.next_token()) {
+	tokens.push_back(lexer.tkn);
+    }    
+}
+
+void Text_Input::update(Data_Manager& data_manager)
+{
+    if (IsKeyPressed(KEY_ENTER))
+	input_active = !input_active;
+
+    if (IsKeyPressed(KEY_ESCAPE)) {
+	input_active = false;
+	input.clear();
+    }
+
+    static size_t prev_input_size = 0;
+
+    g_keyboard_lock = false;
+    if (input_active) {
+	g_keyboard_lock = true;
+	
+	int key = GetCharPressed();
+	while (key > 0) {
+	    if ((key >= 32) && (key <= 127)) {
+		input += (char)key;
+	    }
+	    key = GetCharPressed();  // get next character in the queue
+	}
+
+	if (input.size() != prev_input_size) {
+	    tokenize_input();
+	    prev_input_size = input.size();
+	}
+	
+	if (IsKeyPressed(KEY_BACKSPACE) && !input.empty()) {
+	    if (IsKeyDown(KEY_LEFT_CONTROL)) {
+		input.erase(input.begin() + (tokens.back().ptr - lexer.get_input().c_str()), input.end());
+		tokenize_input();
+		prev_input_size = input.size();
+	    }
+	    else {
+		input.pop_back();
+	    }
+	}
+    }
+    else if (!input.empty()) {
+	handle_command(data_manager, input);
+	lexer = Lexer{};
+	input.clear();
+    }
+}
+
+void Text_Input::draw()
+{
+    Vector2 draw_pos = { TEXT_INPUT_OFFSET.x, float(GetScreenHeight()) - (TEXT_INPUT_OFFSET.y + TEXT_INPUT_FONT_SIZE) };
+    if (input_active) {
+	char str[2] = {0, 0};
+
+	static int previous_result = 0;
+	int result = size_t(GetTime() / TEXT_INPUT_CURSO_BLINK_TIME) % 2;
+	if (result != previous_result) {
+	    previous_result = result;
+	    show_cursor = !show_cursor;
+	}
+	
+	Vector2 size = {0, 0};
+	if (!lexer.get_input().empty())
+	   size = MeasureTextEx(*TEXT_INPUT_FONT, lexer.get_input().c_str(), TEXT_INPUT_FONT_SIZE, 0);
+	if (show_cursor)
+	    size.x += MeasureTextEx(*TEXT_INPUT_FONT, "|", TEXT_INPUT_FONT_SIZE, 0).x;
+	DrawRectangleV({draw_pos.x - 3.f, draw_pos.y - 3.f}, {std::max(size.x, TEXT_INPUT_MIN_BOX_SIZE) + 6.f, TEXT_INPUT_FONT_SIZE + 3.f}, {230, 230, 230, 255});
+	
+	if (!lexer.get_input().empty()) {
+	    Color color;
+	    int tkn_idx = 0;
+	    for(int i = 0; i < lexer.get_input().size(); ++i) {
+		str[0] = lexer.get_input()[i];
+
+		if (!tokens.empty()) {
+		    while (lexer.get_input().c_str() + i >= tokens[tkn_idx].ptr + tokens[tkn_idx].size)
+			++tkn_idx;
+	    
+		    if ((lexer.get_input().c_str() + i >= tokens[tkn_idx].ptr) && (lexer.get_input().c_str() + i < tokens[tkn_idx].ptr + tokens[tkn_idx].size)) {
+			if (tokens[tkn_idx].type < 256 || (tokens[tkn_idx].type >= tkn_update_add && tokens[tkn_idx].type <= tkn_pow))
+			    color = DARKGRAY;
+			else if (tokens[tkn_idx].type == tkn_data || tokens[tkn_idx].type == tkn_function)
+			    color = DARKGREEN;
+			else if (tokens[tkn_idx].type >= tkn_int && tokens[tkn_idx].type <= tkn_false)
+			    color = BLUE;
+			else if (tokens[tkn_idx].type >= tkn_fit && tokens[tkn_idx].type <= tkn_extrema)
+			    color = MAROON;
+			else
+			    color = BLACK;
+		    }
+		}
+
+		DrawTextEx(*TEXT_INPUT_FONT, str, draw_pos, TEXT_INPUT_FONT_SIZE, 0, color);
+		color = BLACK;
+		draw_pos.x += MeasureTextEx(*TEXT_INPUT_FONT, str, TEXT_INPUT_FONT_SIZE, 0).x;
+	    }
+	}
+	
+	if (show_cursor)
+	    DrawTextEx(*TEXT_INPUT_FONT, "|", draw_pos, TEXT_INPUT_FONT_SIZE, 0, BLACK);
+    }
+}
+     
 bool load_dropped_files(Data_Manager& fluss_daten) {
     if (IsFileDropped()) {
 	FilePathList path_list = LoadDroppedFiles();
@@ -371,23 +497,27 @@ int main()
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_ALWAYS_RUN | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT);
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Flusssensor Tool");
     SetTargetFPS(TARGET_FPS);
+    SetExitKey(KEY_NULL);
 
     g_app_font_18 = LoadFontEx("resources/Roboto-Regular.ttf", 18, nullptr, 0);
     g_app_font_20 = LoadFontEx("resources/Roboto-Regular.ttf", 20, nullptr, 0);
     g_app_font_22 = LoadFontEx("resources/Roboto-Regular.ttf", 22, nullptr, 0);
 
     Data_Manager data_manager;
+    Text_Input text_input;
 
     while (!WindowShouldClose()) {
 
 	load_dropped_files(data_manager);
 
-	handle_command(data_manager);
+	text_input.update(data_manager);
+	// handle_command(data_manager);
 
 	BeginDrawing();
 	{
 	    ClearBackground(WHITE);
 	    data_manager.draw();
+	    text_input.draw();
 	}
         EndDrawing();
     }

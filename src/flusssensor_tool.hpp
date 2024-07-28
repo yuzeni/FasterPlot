@@ -6,6 +6,7 @@
 
 #include "function_fitting.hpp"
 #include "utils.hpp"
+#include "lexer.hpp"
 
 constexpr int graph_color_array_cnt = 21;
 inline Color graph_color_array[graph_color_array_cnt] = {
@@ -210,3 +211,18 @@ private:
     void draw_functions();
 };
 
+struct Text_Input
+{
+    void draw();
+    void update(Data_Manager& data_manger);
+    
+private:
+
+    void tokenize_input();
+    
+    bool input_active = false;
+    std::string input;
+    Lexer lexer;
+    std::vector<Token> tokens;
+    bool show_cursor = true;
+};
