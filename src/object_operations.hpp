@@ -10,6 +10,6 @@ inline double mul_op(double a, double b) { return a * b; }
 inline double div_op(double a, double b) { return a / b; }
 
 bool interp_plot_data(Data_Manager &data_manager, Plot_Data *plot_data, int n_itr);
-bool smooth_plot_data(Plot_Data *plot_data);
+bool smooth_plot_data(Plot_Data *plot_data, int window_size);
 
 void fit_sinusoid_plot_data(Plot_Data* plot_data, Function* function);

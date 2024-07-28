@@ -366,16 +366,6 @@ void handle_command(Data_Manager &data_manager)
 	    }
 	    return;
 	case OP_smooth:
-	    arg_unary = expect_command_object(data_manager, lexer);
-	    if (arg_unary.is_undefined())
-		return;
-	    if (arg_unary.type != OT_plot_data) {
-		lexer.parsing_error(lexer.tkn, "Expected data, but got '%s'.", object_type_name_table[arg_unary.type]);
-		return;
-	    }
-	    
-	    // smooth_plot_data(arg_unary.obj.plot_data);
-	    return;
 	case OP_interp:
 	    arg_unary = expect_command_object(data_manager, lexer);
 	    if (arg_unary.is_undefined())
@@ -394,9 +384,15 @@ void handle_command(Data_Manager &data_manager)
 				    object_type_name_table[arg_unary.type], get_token_name_str(arg_binary.tkn.type).c_str());
 		return;
 	    }
-	    
-	    if (!interp_plot_data(data_manager, arg_unary.obj.plot_data, arg_binary.tkn.i))
-		lexer.parsing_error(op.tkn, "Error occured trying to interpolate the data, perhaps X or Y were empty.");
+
+	    if (op.type == OP_smooth) {
+		if (!smooth_plot_data(arg_unary.obj.plot_data, arg_binary.tkn.i))
+		    lexer.parsing_error(op.tkn, "Error occured trying to smooth the data, perhaps X or Y were empty.");
+	    }
+	    else if (op.type == OP_interp) {
+		if (!interp_plot_data(data_manager, arg_unary.obj.plot_data, arg_binary.tkn.i))
+		    lexer.parsing_error(op.tkn, "Error occured trying to interpolate the data, perhaps X or Y were empty.");
+	    }
 	    return;
 	}
 

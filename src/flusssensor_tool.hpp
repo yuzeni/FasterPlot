@@ -9,11 +9,7 @@
 
 constexpr int graph_color_array_cnt = 21;
 inline Color graph_color_array[graph_color_array_cnt] = {
-    RED,
-    YELLOW,
-    GOLD,
-    ORANGE,
-    PINK,
+    
     MAROON,
     GREEN,
     LIME,
@@ -21,6 +17,11 @@ inline Color graph_color_array[graph_color_array_cnt] = {
     SKYBLUE,
     BLUE,
     DARKBLUE,
+    RED,
+    YELLOW,
+    GOLD,
+    ORANGE,
+    PINK,
     PURPLE,
     VIOLET,
     DARKPURPLE,

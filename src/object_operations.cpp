@@ -1,11 +1,14 @@
 #include "object_operations.hpp"
 
+#include <algorithm>
+
 #include "flusssensor_tool.hpp"
 #include "function_fitting.hpp"
+#include "utils.hpp"
 
 bool interp_plot_data(Data_Manager &data_manager, Plot_Data *plot_data, int n_itr)
 {
-    if(plot_data->y.empty() || !plot_data->x)
+    if (plot_data->y.empty() || !plot_data->x)
 	return false;
 
     std::vector<double> new_y(plot_data->y.size() * 2);
@@ -17,7 +20,7 @@ bool interp_plot_data(Data_Manager &data_manager, Plot_Data *plot_data, int n_it
     new_x[0] = plot_data->x->y[0];
     new_y[0] = plot_data->y[0];
 	
-    for(size_t ix = 1; ix < plot_data->x->y.size(); ++ix)
+    for(size_t ix = 1; ix < plot_data->size(); ++ix)
     {
 	y_b = plot_data->y[ix];
 	x_b = plot_data->x->y[ix];
@@ -45,6 +48,21 @@ bool interp_plot_data(Data_Manager &data_manager, Plot_Data *plot_data, int n_it
     return true;
 }
 
+bool smooth_plot_data(Plot_Data *plot_data, int window_size)
+{
+    if (plot_data->y.empty() || !plot_data->x)
+	return false;
+
+    for(size_t ix = 0; ix < plot_data->size(); ++ix)
+    {
+	double sum = 0;
+	for (int iw = - window_size; iw <= window_size; ++iw) {
+	    sum += plot_data->y[std::clamp(int(ix) + iw, 0, int(plot_data->size() - 1))];
+	}
+	plot_data->y[ix] = sum / double(2 * window_size + 1);
+    }
+    return true;
+}
 
 void fit_sinusoid_plot_data(Plot_Data *plot_data, Function *function)
 {
