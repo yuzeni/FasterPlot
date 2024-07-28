@@ -8,6 +8,7 @@ enum Object_Type
     OT_plot_data,
     OT_function,
     OT_value,
+    OT_plot_data_ptr,
     OT_SIZE, 
 };
 
@@ -16,6 +17,7 @@ inline const char *object_type_name_table[OT_SIZE] {
     "plot_data",
     "function",
     "value",
+    "plot_data_ptr",
 };
 
 struct Plot_Data;
@@ -26,6 +28,7 @@ struct Command_Object
     Token tkn;
     union {
 	Plot_Data* plot_data;
+	Plot_Data** plot_data_ptr;
 	Function* function;
     } obj;
 
@@ -46,6 +49,8 @@ enum Operator_Type {
     OP_smooth,
     OP_interp,
     OP_fit,
+    OP_show,
+    OP_hide,
     OP_SIZE,
 };
 
@@ -62,6 +67,8 @@ inline const char *operator_type_name_table[OP_SIZE] {
     "assign",
     "smooth",
     "interp",
+    "show",
+    "hide",
     "fit",
 };
 
@@ -79,6 +86,8 @@ inline int op_arg_cnt_table[OP_SIZE] {
     2,
     2,
     2,
+    1,
+    1,
 };
 
 struct Command_Operator

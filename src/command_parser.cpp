@@ -36,11 +36,12 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
 	    return {};
 	}
 	object.type = OT_plot_data;
-	if (lexer.tkn.type == tkn_new) {
+	switch (lexer.tkn.type) {
+	case tkn_new:
 	    data_manager.new_plot_data();
 	    object.obj.plot_data = data_manager.plot_data.back();
-	}
-	else if(lexer.tkn.type == tkn_int) {
+	    break;
+	case tkn_int:
 	    if(lexer.tkn.i < int64_t(data_manager.plot_data.size())) {
 		object.obj.plot_data = data_manager.plot_data[lexer.tkn.i];
 	    }
@@ -48,6 +49,12 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
 		lexer.parsing_error(lexer.tkn, "The plot data with index '%d' does not exist.", lexer.tkn.i);
 		return {};
 	    }
+	    if (lexer.next_tkn.type == tkn_x) {
+		object.type = OT_plot_data_ptr;
+		object.obj.plot_data_ptr = &object.obj.plot_data->x;
+		lexer.next_token();
+	    }
+	    break;
 	}
 	break;
     case tkn_function:
@@ -84,12 +91,12 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
     return object;
 }
 
-static Command_Operator get_command_operator(Lexer& lexer)
+static Command_Operator get_command_operator(Token tkn)
 {
     Command_Operator op;
-    op.tkn = lexer.tkn;
+    op.tkn = tkn;
     
-    switch(lexer.tkn.type) {
+    switch(tkn.type) {
     case '+':
 	op.type = OP_add;
 	break;
@@ -125,6 +132,12 @@ static Command_Operator get_command_operator(Lexer& lexer)
 	break;
     case tkn_fit:
 	op.type = OP_fit;
+	break;
+    case tkn_hide:
+	op.type = OP_hide;
+	break;
+    case tkn_show:
+	op.type = OP_show;
 	break;
     }
     return op;
@@ -187,6 +200,9 @@ void op_unary_assign(Command_Object object, Command_Object arg_unary)
 	object.obj.function->type = arg_unary.obj.function->type;
 	object.obj.function->func = arg_unary.obj.function->func;
     }
+    else if (object.type == OT_plot_data_ptr && arg_unary.type == OT_plot_data) {
+	*object.obj.plot_data_ptr = arg_unary.obj.plot_data;
+    }
     else {
 	log_error("Plots and functions cannot be assigned to each other.");
     }
@@ -204,6 +220,8 @@ void op_fit_assign(Lexer& lexer, Command_Object object, Command_Operator op, Com
 			    object_type_name_table[arg_binary.type], operator_type_name_table[op.type]);
 	return;
     }
+
+    object.obj.function->fit_from_data = arg_binary.obj.plot_data;
 
     if (arg_unary.tkn.type == tkn_sinusoid) {
 	fit_sinusoid_plot_data(arg_binary.obj.plot_data, object.obj.function);
@@ -344,7 +362,7 @@ void handle_command(Data_Manager &data_manager)
 	Command_Object object, arg_unary, arg_binary;
 
 	// = expression (print expression)
- 	Command_Operator op = get_command_operator(lexer);
+ 	Command_Operator op = get_command_operator(lexer.tkn);
 	switch(op.type) {
 	case OP_assign:
 	    arg_unary = expect_command_object(data_manager, lexer);
@@ -353,7 +371,7 @@ void handle_command(Data_Manager &data_manager)
 	    
 	    if (!expect_next_token(lexer))
 		return;
-	    op = get_command_operator(lexer);
+	    op = get_command_operator(lexer.tkn);
 	    if (op.is_undefined()) {
 		print_unary(arg_unary, lexer);
 		return;
@@ -394,35 +412,53 @@ void handle_command(Data_Manager &data_manager)
 		    lexer.parsing_error(op.tkn, "Error occured trying to interpolate the data, perhaps X or Y were empty.");
 	    }
 	    return;
+	case OP_show:
+	case OP_hide:
+	    arg_unary = expect_command_object(data_manager, lexer);
+	    if (arg_unary.is_undefined())
+		return;
+	    if (arg_unary.type != OT_plot_data && arg_unary.type != OT_function) {
+		lexer.parsing_error(lexer.tkn, "Expected data or function, but got '%s'.", object_type_name_table[arg_unary.type]);
+		return;
+	    }
+
+	    if (arg_unary.type == OT_plot_data)
+		arg_unary.obj.plot_data->info.visible = op.type == OP_show ? true : false;
+	    else if (arg_unary.type == OT_function)
+		arg_unary.obj.function->info.visible = op.type == OP_show ? true : false;
+	    return;
 	}
 
 	// object = expression (assign expression to object)
 	object = get_command_object(data_manager, lexer);
-	if (object.is_undefined())
+	if (object.is_undefined()) {
+	    lexer.parsing_error(object.tkn, "Undefined object.");
 	    return;
+	}
 
 	if (!expect_next_token(lexer))
 	    return;
 
-	op = get_command_operator(lexer);
-	if (op.type == OP_assign) {
+	op = get_command_operator(lexer.tkn);
+	if (get_command_operator(lexer.next_tkn).type != OP_undefined) {
 	    if (!expect_next_token(lexer))
 		return;
-	    op = get_command_operator(lexer);
-	}
-	if (op.is_undefined()) {
-	    op.type = OP_assign;
+	    op = get_command_operator(lexer.tkn);
 	}
 
 	if (op_arg_cnt_table[op.type] >= 1) {
 	    arg_unary = expect_command_object(data_manager, lexer);
-	    if (arg_unary.is_undefined())
+	    if (arg_unary.is_undefined()) {
+		lexer.parsing_error(arg_unary.tkn, "Undefined object.");
 		return;
+	    }
 	}
 	if (op_arg_cnt_table[op.type] >= 2) {
 	    arg_binary = expect_command_object(data_manager, lexer);
-	    if (arg_binary.is_undefined())
+	    if (arg_binary.is_undefined()) {
+		lexer.parsing_error(arg_unary.tkn, "Undefined object.");
 		return;
+	    }
 	}
 
 	execute_assign_operation(lexer, object, op, arg_unary, arg_binary);

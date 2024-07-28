@@ -33,6 +33,50 @@ inline Color graph_color_array[graph_color_array_cnt] = {
     DARKGRAY,
 };
 
+struct Content_Tree_Element_String {
+
+    Content_Tree_Element_String(std::string str) : str(str) {}
+    Content_Tree_Element_String(std::string str, bool new_field, Color color)
+	: str(str), new_field(new_field), color(color) {}
+
+    std::string str;
+    bool new_field = true;
+    Color color = BLACK;
+};
+
+struct Content_Tree_Element
+{
+    Content_Tree_Element() {}
+    Content_Tree_Element(std::string name) : name(name) {}
+
+    std::string name;
+    Color name_color = BLACK;
+    bool open = false;
+    std::vector<Content_Tree_Element_String> content;
+};
+
+struct Content_Tree
+{
+    Content_Tree()
+    {
+	base_element.name = "content";
+	base_element.open = true;
+    }
+    
+    void draw();
+    void add_element(Content_Tree_Element* elem)
+    {
+	content_elements.push_back(elem);
+    }
+    
+private:
+    Content_Tree_Element base_element;
+    std::vector<Content_Tree_Element*> content_elements;
+
+private:
+    void draw_element(Vec2<int> &draw_pos, Content_Tree_Element* elem, int font_size, Font font);
+};
+
 enum Plot_Type
 {
     PT_DISCRETE = 1,
@@ -45,6 +89,8 @@ struct Plot_Info
     Color color = BLACK;
     Plot_Type plot_type = Plot_Type(PT_INTERP_LINEAR);
     float thickness = 4;
+    bool visible = true;
+    
 };
 
 struct Plot_Data
@@ -52,6 +98,7 @@ struct Plot_Data
     Plot_Info info;
     std::vector<double> y;
     Plot_Data* x = nullptr;
+    Content_Tree_Element content_element;
     
     size_t size()
     {
@@ -59,6 +106,8 @@ struct Plot_Data
 	    return std::min(y.size(), x->y.size());
 	return y.size();
     };
+
+    void update_content_tree_element(size_t index);
 };
 
 struct Function
@@ -66,6 +115,8 @@ struct Function
     Plot_Info info;
     Function_Type type = FT_undefined;
     Plot_Data* x = nullptr;
+    Content_Tree_Element content_element;
+    Plot_Data* fit_from_data = nullptr;
     
     double operator()(double x) const
     {
@@ -91,6 +142,8 @@ struct Function
 	    return x->y.size();
 	return 0;
     };
+
+    void update_content_tree_element(size_t index);
     
     union {
 	Undefined_Function undefined = Undefined_Function{};
@@ -150,6 +203,7 @@ private:
 
     Plot_Data default_x;
     int graph_color_array_idx = 0;
+    Content_Tree content_tree;
     
     void fit_camera_to_plot();
     void draw_plot_data();

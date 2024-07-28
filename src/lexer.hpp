@@ -32,7 +32,8 @@ enum Token_enum : uint32_t {
     tkn_points, // add // data 1 points = true
     tkn_lines, // add
     tkn_x, // add // data 1 x = data 0
-    tkn_hide, // add // data 1 hide = true
+    tkn_show,
+    tkn_hide, // add // hide data 1
     tkn_smooth, // smooth data 1, 10
     tkn_interp, // interp data 1, 1.3
     
@@ -69,8 +70,7 @@ class Lexer {
 public:
     
     void load_input_from_string(std::string source);
-    bool next_token(); // wrapper function
-    Token& peek_next_token();
+    bool next_token();
     bool not_eof() { return tkn.type != tkn_eof; }
     void print_token(Token& tkn, bool show_content = false) const;
 
@@ -100,10 +100,12 @@ public:
     int error_cnt = 0;
 
     Token tkn;
+    Token next_tkn;
 
 private:
 
-    bool push(Token tkn) { this->tkn = tkn; return true; }
+    bool get_next_token();
+    bool push(Token next_tkn) { this->next_tkn = next_tkn; return true; }
 
     std::string input;
     char* p_begin = nullptr;

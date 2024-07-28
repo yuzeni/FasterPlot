@@ -38,6 +38,7 @@ static const char *token_name_table[tkn_SIZE - 256]{
     "points",
     "lines",
     "x",
+    "show",
     "hide",
     "smooth",
     "interp",
@@ -87,6 +88,7 @@ Token_enum keyword_compare(const std::string_view sv)
     case cte_hash_c_str("points"): return tkn_points;
     case cte_hash_c_str("lines"): return tkn_lines;
     case cte_hash_c_str("x"): return tkn_x;
+    case cte_hash_c_str("show"): return tkn_show;
     case cte_hash_c_str("hide"): return tkn_hide;
     case cte_hash_c_str("smooth"): return tkn_smooth;
     case cte_hash_c_str("interp"): return tkn_interp;
@@ -184,8 +186,17 @@ void Lexer::after_load_init()
     eof = p + input.size();
 }
 
-bool Lexer::next_token()
+bool Lexer::next_token() {
+    if (tkn.type == tkn_none)
+	get_next_token();
+    get_next_token();
+    return tkn.type != tkn_eof && tkn.type != tkn_parse_error;
+}
+
+bool Lexer::get_next_token()
 {
+    tkn = next_tkn;
+    
     if (p == eof)
 	p = nullptr;
     if (!p)
@@ -224,7 +235,7 @@ bool Lexer::next_token()
 	    ++p;
 	std::string_view sv(begin, p);
 	bool result = push(Token{tkn_ident, begin, &sv});
-	tkn.type = keyword_compare(tkn.sv);
+	next_tkn.type = keyword_compare(next_tkn.sv);
 	return result;
     }
     
@@ -283,7 +294,7 @@ bool Lexer::next_token()
     if (p == eof) return push(Token{tkn_eof, eof});
 
     // when stuck, just get the next token.
-    parsing_error(tkn, "Failed to parse the character after this token.");
+    parsing_error(next_tkn, "Failed to parse the character after this token.");
     ++p;
     return next_token();
 }
