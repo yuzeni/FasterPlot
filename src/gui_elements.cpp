@@ -2,6 +2,8 @@
 
 #include "global_vars.hpp"
 #include "command_parser.hpp"
+#include "raylib.h"
+#include "utils.hpp"
 
 // content tree
 constexpr Vec2<int> CONTENT_TREE_OFFSET {20, 20};
@@ -18,6 +20,12 @@ constexpr Font *TEXT_INPUT_FONT = &g_app_font_20;
 constexpr int TEXT_INPUT_FONT_SIZE = 20;
 constexpr float TEXT_INPUT_MIN_BOX_SIZE = 100;
 constexpr double TEXT_INPUT_CURSO_BLINK_TIME = 0.5; // in seconds
+
+// log draw
+constexpr Vec2<int> LOG_DRAW_OFFSET{20, 20};
+constexpr Font *LOG_DRAW_FONT = &g_app_font_20;
+constexpr int LOG_DRAW_FONT_SIZE = 20;
+constexpr float LOG_DRAW_WINDOW_WIDTH_RATIO = 0.25;
 
 
 static Vector2 draw_and_check_text_boxed(Font font, const char *text, Vector2 position, float fontSize, float spacing, Color tint, Content_Tree_Element* elem)
@@ -206,4 +214,16 @@ void Text_Input::draw()
 	if (show_cursor)
 	    DrawTextEx(*TEXT_INPUT_FONT, "|", draw_pos, TEXT_INPUT_FONT_SIZE, 0, BLACK);
     }
+}
+
+void Log_Draw::draw()
+{
+    Vector2 draw_pos = Vec2<int>{GetScreenWidth(), GetScreenHeight()} - LOG_DRAW_OFFSET;
+    Vector2 orig_draw_pos = draw_pos;
+
+    std::vector<Log_Msg>& msgs = logger.log_msgs;
+    
+    // for(size_t i = 0; i < msgs.size(); ++i) {
+    // 	MeasureTextEx(*LOG_DRAW_FONT, msgs[i].msg, LOG)
+    // }
 }

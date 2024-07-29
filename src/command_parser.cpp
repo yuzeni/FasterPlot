@@ -13,7 +13,7 @@ static bool expect_next_token(Lexer &lexer) {
 
     ++lexer.tkn_idx;
     if(lexer.get_tokens().empty()) {
-	log_error("Expected another token at the end of the command.");
+	logger.log_error("Expected another token at the end of the command.");
 	return false;
     }
     return true;
@@ -156,7 +156,7 @@ static Command_Operator get_command_operator(Token tkn)
 void op_binary_assign(Lexer& lexer, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary, double (*op_fun)(double, double))
 {
     if (object.type == OT_function) {
-	log_error("Can't assign an addition result to a function.");
+	logger.log_error("Can't assign an addition result to a function.");
 	return;
     }
 
@@ -164,7 +164,7 @@ void op_binary_assign(Lexer& lexer, Command_Object object, Command_Operator op, 
     
     if (arg_unary.type == OT_function && arg_binary.type == OT_function) {
 	if (!object.obj.plot_data->x) {
-	    log_error("Can't combine functions and assign the result to a plot, if the plot does not have an X set.");
+	    logger.log_error("Can't combine functions and assign the result to a plot, if the plot does not have an X set.");
 	    return;
 	}
 	for (size_t ix = 0; ix < object.obj.plot_data->x->y.size(); ++ix) {
@@ -214,7 +214,7 @@ void op_unary_assign(Command_Object object, Command_Object arg_unary)
 	*object.obj.plot_data_ptr = arg_unary.obj.plot_data;
     }
     else {
-	log_error("Plots and functions cannot be assigned to each other.");
+	logger.log_error("Plots and functions cannot be assigned to each other.");
     }
 }
 

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "utils.hpp"
+
 #include "lexer.hpp"
 
 struct Content_Tree_Element_String {
@@ -68,4 +69,9 @@ private:
     std::string input;
     Lexer lexer;
     bool show_cursor = true;
+};
+
+struct Log_Draw {
+
+    void draw();
 };

@@ -13,3 +13,5 @@ compile_flags.txt
 *.obj
 *.pdb
 *.sln
+
+test_daten/

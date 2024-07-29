@@ -2,7 +2,6 @@
 
 #include <cstdint>
 
-#include "command_parser.hpp"
 #include "global_vars.hpp"
 #include "data_manager.hpp"
 #include "gui_elements.hpp"
@@ -36,6 +35,7 @@ int main()
 
     Data_Manager data_manager;
     Text_Input text_input;
+    Log_Draw log_draw;
 
     while (!WindowShouldClose()) {
 
@@ -48,6 +48,7 @@ int main()
 	    ClearBackground(WHITE);
 	    data_manager.draw();
 	    text_input.draw();
+	    log_draw.draw();
 	}
         EndDrawing();
     }

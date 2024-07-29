@@ -2,7 +2,6 @@
 
 #include "global_vars.hpp"
 
-
 // coordinate system
 constexpr int COORDINATE_SYSTEM_GRID_SPACING = 60;
 constexpr int COORDINATE_SYSTEM_FONT_SIZE = 18;

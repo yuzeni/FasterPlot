@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <string_view>
 
+#include "global_vars.hpp"
 #include "utils.hpp"
 
 enum Token_enum : uint32_t {
@@ -95,7 +96,7 @@ public:
 	
 	char buffer[1024];
 	snprintf(buffer, 1024, msg, args...);
-	log_error("%s\n%s", buffer, error_section.c_str());
+	logger.log_error("%s\n%s", buffer, error_section.c_str());
 	++error_cnt;
     }
 

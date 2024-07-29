@@ -10,11 +10,6 @@
 
 #include "utils.hpp"
 
-#ifdef TRACY_ENABLE
-#  include "tracy/Tracy.hpp"
-#endif
-
-
 static const char *token_name_table[tkn_SIZE - 256]{
     "eof",
     "none",
@@ -70,10 +65,6 @@ std::string get_token_name_str(Token_enum tkn)
 // little bit ugly (I would like to iterate over keywords), but fast
 Token_enum keyword_compare(const std::string_view sv)
 {
-#ifdef TRACY_ALL
-    ZoneScoped;
-#endif
-
     // NOTE: There may be collisions for anything longer than 8.
     //       And currently all keywords are smaller than that.
     if (sv.size() > 8)
@@ -170,12 +161,12 @@ Token::Token(Token_enum type, char *ptr, char* ptr_end, void *data)
 	case tkn_string: d_a = true; sv = *reinterpret_cast<std::string_view*>(data); break;
 	case tkn_int:    d_a = true; i = *reinterpret_cast<int64_t*>(data); break;
 	case tkn_real:   d_a = true; d = *reinterpret_cast<double*>(data);  break;
-	default: log_error("The token '%s' does not support data.", get_token_name_str(type).c_str());
+	default: logger.log_error("The token '%s' does not support data.", get_token_name_str(type).c_str());
 	}
     }
     
     if(d_a && !data)
-	log_error("The data ptr for the token was empty");
+	logger.log_error("The data ptr for the token was empty");
 }
 
 void Lexer::load_input_from_string(std::string source)
@@ -269,13 +260,13 @@ bool Lexer::get_next_token()
 	if (has_point || has_exp) {
 	    double number = strtod(begin, &p);
 	    if(errno == ERANGE)
-		log_error("parsed number was out of range");
+		logger.log_error("parsed number was out of range");
 	    return push(Token{tkn_real, begin, p, &number});
 	}
 	else {
 	    int64_t number = strtoll(begin, &p, 0);
 	    if(errno == ERANGE)
-		log_error("parsed number was out of range");
+		logger.log_error("parsed number was out of range");
 	    return push(Token{tkn_int, begin, p, &number});
 	}
     }

@@ -18,41 +18,54 @@ std::pair<char *, size_t> parse_file_cstr(const char *file_name);
 struct Plot_Data;
 std::vector<Plot_Data*> parse_numeric_csv_file(std::string file_name);
 
-#define ERROR_MSG_SIZE 1024
-
-#define UTILS_ERROR_COLOR "\033[91m"
-#define UTILS_END_COLOR   "\033[0m"
-
 struct Log_Msg
 {
     std::string msg;
     Color color;
 };
 
-struct Log_Output {
+constexpr int LOG_OUTPUT_ERROR_MSG_SIZE = 1024;
 
-    void draw();
+struct Logger {
+
     void add_msg(Log_Msg log_msg) { log_msgs.push_back(log_msg); }
-
-private:
     
+    template <typename... Args>
+    void log_error(const char *msg, Args... args)
+    {
+	char buffer[LOG_OUTPUT_ERROR_MSG_SIZE];
+	int true_size = snprintf(buffer, LOG_OUTPUT_ERROR_MSG_SIZE, msg, args...);
+	if(true_size > LOG_OUTPUT_ERROR_MSG_SIZE) {
+	    log_error("Last error message did not fit in the buffer of size %d.", LOG_OUTPUT_ERROR_MSG_SIZE);
+	}
+	else {
+	    log_msgs.push_back({"ERROR: ", RED});
+	    log_msgs.push_back({buffer, BLACK});
+	}
+    }
+
     std::vector<Log_Msg> log_msgs;
 };
 
-template <typename... Args>
-void log_error(const char *msg, Args... args)
-{
-    char buffer[ERROR_MSG_SIZE];
-    int true_size = snprintf(buffer, ERROR_MSG_SIZE, msg, args...);
-    if(true_size > ERROR_MSG_SIZE) {
-	log_error("Last error message did not fit in the buffer of size %d.", ERROR_MSG_SIZE);
-    }
-    else {
-	printf(UTILS_ERROR_COLOR "ERROR:" UTILS_END_COLOR " %s\n", buffer);
-    }
-}
+// #define ERROR_MSG_SIZE 1024
 
-#undef ERROR_MSG_SIZE
+// #define UTILS_ERROR_COLOR "\033[91m"
+// #define UTILS_END_COLOR   "\033[0m"
+
+// template <typename... Args>
+// void log_error(const char *msg, Args... args)
+// {
+//     char buffer[ERROR_MSG_SIZE];
+//     int true_size = snprintf(buffer, ERROR_MSG_SIZE, msg, args...);
+//     if(true_size > ERROR_MSG_SIZE) {
+// 	log_error("Last error message did not fit in the buffer of size %d.", ERROR_MSG_SIZE);
+//     }
+//     else {
+// 	printf(UTILS_ERROR_COLOR "ERROR:" UTILS_END_COLOR " %s\n", buffer);
+//     }
+// }
+
+// #undef ERROR_MSG_SIZE
 
 template <typename T>
 struct Vec2
