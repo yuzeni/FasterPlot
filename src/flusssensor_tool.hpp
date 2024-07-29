@@ -226,3 +226,8 @@ private:
     std::vector<Token> tokens;
     bool show_cursor = true;
 };
+
+inline const char *help_messages[] {
+    "Drag and drop a 'comma seperated value' file. To import data.",
+    "",
+};

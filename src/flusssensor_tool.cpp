@@ -217,6 +217,8 @@ void Data_Manager::draw_functions()
 Data_Manager::Data_Manager()
 {
     camera.coord_sys.origin = {double(plot_padding.x), double(GetScreenHeight() - plot_padding.y)};
+    camera.coord_sys.basis_x = {1, 0};
+    camera.coord_sys.basis_y = {0, -1};
     default_x.content_element.name = "default";
 }
 
@@ -267,8 +269,8 @@ void Data_Manager::add_plot_data(std::string file)
 
 void Data_Manager::draw()
 {
-    if (plot_data.empty())
-	return;
+    // if (plot_data.empty())
+    // 	return;
 
     static int old_g_screen_height = GetScreenHeight();
     camera.coord_sys.origin.y += GetScreenHeight() - old_g_screen_height;
@@ -308,7 +310,6 @@ void Data_Manager::draw()
 	camera.coord_sys.origin = camera.coord_sys.origin + camera.origin_offset * normalize;
 	camera.origin_offset = (camera.coord_sys.origin - Vec2<double>{double(GetMousePosition().x), double(GetMousePosition().y)}) / normalize;
 	camera.coord_sys.origin = camera.coord_sys.origin - camera.origin_offset * normalize;
-		
     }
     
     if (IsKeyPressed(KEY_SPACE) && !g_keyboard_lock) {
@@ -332,6 +333,9 @@ void Data_Manager::draw()
 
 void Data_Manager::fit_camera_to_plot()
 {
+    if (plot_data.empty() && functions.empty())
+	return;
+    
     double max_x = 0;
     double min_x = 0;
     double max_y = 0;
@@ -443,7 +447,7 @@ void Text_Input::draw()
 	   size = MeasureTextEx(*TEXT_INPUT_FONT, lexer.get_input().c_str(), TEXT_INPUT_FONT_SIZE, 0);
 	if (show_cursor)
 	    size.x += MeasureTextEx(*TEXT_INPUT_FONT, "|", TEXT_INPUT_FONT_SIZE, 0).x;
-	DrawRectangleV({draw_pos.x - 3.f, draw_pos.y - 3.f}, {std::max(size.x, TEXT_INPUT_MIN_BOX_SIZE) + 6.f, TEXT_INPUT_FONT_SIZE + 3.f}, {230, 230, 230, 255});
+	DrawRectangleV({draw_pos.x - 3.f, draw_pos.y - 3.f}, {std::max(size.x, TEXT_INPUT_MIN_BOX_SIZE) + 8.f, TEXT_INPUT_FONT_SIZE + 3.f}, {230, 230, 230, 255});
 	
 	if (!lexer.get_input().empty()) {
 	    Color color;
@@ -511,7 +515,6 @@ int main()
 	load_dropped_files(data_manager);
 
 	text_input.update(data_manager);
-	// handle_command(data_manager);
 
 	BeginDrawing();
 	{

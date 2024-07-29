@@ -2,6 +2,7 @@
 env/
 build/
 emacs/
+compile_flags.txt
 
 # Emacs
 \#*\#
