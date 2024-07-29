@@ -1,9 +1,7 @@
 
 #include "command_parser.hpp"
 
-#include "flusssensor_tool.hpp"
-#include "function_fitting.hpp"
-#include "raylib.h"
+#include "data_manager.hpp"
 #include <cstdint>
 #include <iostream>
 

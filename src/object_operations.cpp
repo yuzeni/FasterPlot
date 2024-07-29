@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "flusssensor_tool.hpp"
+#include "data_manager.hpp"
 #include "function_fitting.hpp"
 #include "utils.hpp"
 
@@ -75,16 +75,6 @@ bool get_extrema_plot_data(Plot_Data *object_plot_data, Plot_Data *plot_data)
     if (plot_data->y.empty() || !plot_data->x)
 	return false;
 
-    // std::vector<double> smooth_plot_data_y;
-    // for(size_t ix = 0; ix < plot_data->size(); ++ix)
-    // {
-    // 	double sum = 0;
-    // 	for (int iw = - window_size; iw <= window_size; ++iw) {
-    // 	    sum += plot_data->y[std::clamp(int(ix) + iw, 0, int(plot_data->size() - 1))];
-    // 	}
-    // 	smooth_plot_data_y.push_back(sum / double(2 * window_size + 1));
-    // }
-
     object_plot_data->y.clear();
 
     double prev_val = plot_data->y[0];
@@ -102,33 +92,4 @@ bool get_extrema_plot_data(Plot_Data *object_plot_data, Plot_Data *plot_data)
 	going_up = val >= prev_val;
     }
     return true;
-
-    // double prev_val = plot_data->y[0];
-    // bool going_up;
-    
-    // double val = 0;
-    // for (int iw = - window_size; iw <= window_size; ++iw) {
-    // 	val += plot_data->y[std::clamp(iw, 0, int(plot_data->size() - 1))];
-    // }
-    // val /= double(2 * window_size + 1);
-    // going_up = val > prev_val;
-    // prev_val = val;
-	
-    // for(size_t ix = 1; ix < plot_data->size(); ++ix)
-    // {
-    // 	val = 0;
-    // 	for (int iw = - window_size; iw <= window_size; ++iw) {
-    // 	    val += plot_data->y[std::clamp(int(ix) + iw, 0, int(plot_data->size() - 1))];
-    // 	}
-    // 	val /= double(2 * window_size + 1);
-	
-    // 	if ((going_up && val < prev_val) || (!going_up && val > prev_val)) {
-    // 	    object_plot_data->y.push_back(plot_data->y[ix]);
-    // 	    object_plot_data->x->y.push_back(plot_data->x->y[ix]);
-    // 	}
-
-    // 	going_up = val > prev_val;
-    // 	prev_val = val;
-    // }
-    // return true;
 }

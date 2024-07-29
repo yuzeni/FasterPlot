@@ -1,11 +1,11 @@
 #include "utils.hpp"
 
+#include "data_manager.hpp"
+
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <utility>
-
-#include "flusssensor_tool.hpp"
 
 std::pair<char *, size_t> parse_file_cstr(const char *file_name)
 {
@@ -163,4 +163,12 @@ uint64_t hash_string_view(std::string_view s_v, uint64_t hash) {
     for(size_t i = 0; i < s_v.size(); ++i)
 	hash = (hash * 33) ^ s_v[i];
     return hash;
+}
+
+Vector2 draw_text_boxed(Font font, const char *text, Vector2 position, float fontSize, float spacing, Color tint)
+{
+    Vector2 size = MeasureTextEx(font, text, fontSize, spacing);
+    DrawRectangleV({position.x - 3.f, position.y - 3.f}, {size.x + 3.f, size.y + 3.f}, {255, 255, 255, 255});
+    DrawTextEx(font, text, position, fontSize, spacing, tint);
+    return size;
 }

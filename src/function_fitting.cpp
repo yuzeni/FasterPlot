@@ -1,5 +1,6 @@
 #include "function_fitting.hpp"
-#include "flusssensor_tool.hpp"
+
+#include "data_manager.hpp"
 
 #include <cmath>
 

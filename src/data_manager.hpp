@@ -1,12 +1,9 @@
 #pragma once
 
-#include <cstddef>
-#include <string>
-#include <vector>
+#include "raylib.h"
 
 #include "function_fitting.hpp"
-#include "utils.hpp"
-#include "lexer.hpp"
+#include "gui_elements.hpp"
 
 constexpr int graph_color_array_cnt = 20;
 inline Color graph_color_array[graph_color_array_cnt] = {
@@ -32,51 +29,6 @@ inline Color graph_color_array[graph_color_array_cnt] = {
     LIGHTGRAY,
     GRAY,
     DARKGRAY,
-};
-
-struct Content_Tree_Element_String {
-
-    Content_Tree_Element_String(std::string str) : str(str) {}
-    Content_Tree_Element_String(std::string str, bool new_field, Color color)
-	: str(str), new_field(new_field), color(color) {}
-
-    std::string str;
-    bool new_field = true;
-    Color color = BLACK;
-};
-
-struct Content_Tree_Element
-{
-    Content_Tree_Element() {}
-    Content_Tree_Element(std::string name) : name(name) {}
-
-    std::string name;
-    Color name_color = BLACK;
-    bool open = false;
-    std::vector<Content_Tree_Element_String> content;
-};
-
-struct Content_Tree
-{
-    Content_Tree()
-    {
-	base_element.name = "content";
-	base_element.open = true;
-    }
-    
-    void draw();
-    void add_element(Content_Tree_Element* elem)
-    {
-	content_elements.push_back(elem);
-    }
-    void delete_element(Content_Tree_Element* elem);
-    
-private:
-    Content_Tree_Element base_element;
-    std::vector<Content_Tree_Element*> content_elements;
-
-private:
-    void draw_element(Vec2<int> &draw_pos, Content_Tree_Element* elem, int font_size, Font font);
 };
 
 enum Plot_Type
@@ -117,7 +69,6 @@ struct Function
 {
     Plot_Info info;
     Function_Type type = FT_undefined;
-    // Plot_Data* x = nullptr;
     Content_Tree_Element content_element;
     Plot_Data* fit_from_data = nullptr;
     
@@ -138,13 +89,6 @@ struct Function
 	}
 	return false;
     }
-
-    // size_t size()
-    // {
-    // 	if(x)
-    // 	    return x->y.size();
-    // 	return 0;
-    // };
 
     void update_content_tree_element(size_t index);
     
@@ -216,21 +160,6 @@ private:
     void fit_camera_to_plot();
     void draw_plot_data();
     void draw_functions();
-};
-
-struct Text_Input
-{
-    void draw();
-    void update(Data_Manager& data_manger);
-    
-private:
-
-    void tokenize_input();
-    
-    bool input_active = false;
-    std::string input;
-    Lexer lexer;
-    bool show_cursor = true;
 };
 
 inline const char *help_messages[] {

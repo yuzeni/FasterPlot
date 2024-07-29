@@ -23,6 +23,22 @@ std::vector<Plot_Data*> parse_numeric_csv_file(std::string file_name);
 #define UTILS_ERROR_COLOR "\033[91m"
 #define UTILS_END_COLOR   "\033[0m"
 
+struct Log_Msg
+{
+    std::string msg;
+    Color color;
+};
+
+struct Log_Output {
+
+    void draw();
+    void add_msg(Log_Msg log_msg) { log_msgs.push_back(log_msg); }
+
+private:
+    
+    std::vector<Log_Msg> log_msgs;
+};
+
 template <typename... Args>
 void log_error(const char *msg, Args... args)
 {
@@ -91,3 +107,5 @@ bool check_flag(T var, T flag)
 	return true;
     return false;
 }
+
+Vector2 draw_text_boxed(Font font, const char *text, Vector2 position, float fontSize, float spacing, Color tint);
