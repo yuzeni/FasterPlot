@@ -150,6 +150,15 @@ void Content_Tree::draw()
     }
 }
 
+void Content_Tree::delete_element(Content_Tree_Element *elem)
+{
+    for (size_t i = 0; i < content_elements.size(); ++i) {
+	if (content_elements[i] == elem) {
+	    content_elements.erase(content_elements.begin() + i);
+	}
+    }
+}
+
 static void draw_vp_camera_coordinate_system(VP_Camera camera, int target_spacing)
 {
     int grid_resolution = std::max(GetScreenWidth(), GetScreenHeight()) / target_spacing;
@@ -179,10 +188,13 @@ static void draw_vp_camera_coordinate_system(VP_Camera camera, int target_spacin
 
 void Data_Manager::draw_plot_data()
 {
-    for(const auto& pd : plot_data) {
+    for(const auto& pd : plot_data)
+    {
 	if (!pd->x || !pd->info.visible)
 	    continue;
-	for(size_t ix = 0; ix < pd->size(); ++ix) {
+	
+	for(size_t ix = 0; ix < pd->size(); ++ix)
+	{
 	    Vec2<double> screen_space_point = camera.coord_sys.transform_to(Vec2<double>{pd->x->y[ix], pd->y[ix]} + camera.origin_offset, app_coordinate_system);
 	    Vec2<double> prev_screen_space_point;
 	    if(pd->info.plot_type & PT_DISCRETE) {
@@ -203,11 +215,15 @@ void Data_Manager::draw_plot_data()
 
 void Data_Manager::draw_functions()
 {
-    for(const auto& func : functions) {
-	if (!func->is_defined() || !func->x || !func->info.visible)
+    for(const auto& func : functions)
+    {
+	if (!func->is_defined() || !func->info.visible)
 	    continue;
-	for(size_t ix = 0; ix < func->size(); ++ix) {
-	    Vec2<double> screen_space_point = camera.coord_sys.transform_to(Vec2<double>{func->x->y[ix], func->operator()(func->x->y[ix])} + camera.origin_offset,
+	
+	for(size_t ix = 0; ix < size_t(GetScreenWidth()); ix += 1)
+	{
+	    double camera_space_x = app_coordinate_system.transform_to(Vec2<double>{double(ix), 0} - camera.coord_sys.origin, camera.coord_sys).x - camera.origin_offset.x;
+	    Vec2<double> screen_space_point = camera.coord_sys.transform_to(Vec2<double>{camera_space_x, func->operator()(camera_space_x)} + camera.origin_offset,
 									    app_coordinate_system);
 	    Vec2<double> prev_screen_space_point;
 	    if(func->info.plot_type & PT_DISCRETE) {
@@ -238,7 +254,7 @@ Data_Manager::~Data_Manager()
 	delete f;
 }
 
-void Data_Manager::new_plot_data(Plot_Data* data)
+void Data_Manager::new_plot_data(Plot_Data *data)
 {
     if (data)
 	plot_data.push_back(data);
@@ -254,17 +270,42 @@ void Data_Manager::new_plot_data(Plot_Data* data)
     content_tree.add_element(&plot_data.back()->content_element);
 }
 
+void Data_Manager::delete_plot_data(Plot_Data *data)
+{
+    // also checks for references to the deleted object and resolves them
+    for (size_t i = 0; i < plot_data.size(); ++i) {
+	if (plot_data[i] == data) {
+	    plot_data.erase(plot_data.begin() + i);
+	    content_tree.delete_element(&data->content_element);
+	    delete data;
+	}
+	
+	if (plot_data[i]->x == data)
+	    plot_data[i]->x = &default_x;
+    }
+}
+
 void Data_Manager::new_function()
 {
     functions.push_back(new Function);
     
-    functions.back()->x = &default_x;
     functions.back()->info.color = graph_color_array[graph_color_array_idx];
     ++graph_color_array_idx;
     if (graph_color_array_idx >= graph_color_array_cnt)
 	graph_color_array_idx = 0;
     
     content_tree.add_element(&functions.back()->content_element);
+}
+
+void Data_Manager::delete_function(Function *func)
+{
+    for (size_t i = 0; i < functions.size(); ++i) {
+	if (functions[i] == func) {
+	    functions.erase(functions.begin() + i);
+	    content_tree.delete_element(&func->content_element);
+	    delete func;
+	}
+    }
 }
     
 void Data_Manager::add_plot_data(std::string file)
@@ -277,9 +318,6 @@ void Data_Manager::add_plot_data(std::string file)
 
 void Data_Manager::draw()
 {
-    // if (plot_data.empty())
-    // 	return;
-
     static int old_g_screen_height = GetScreenHeight();
     camera.coord_sys.origin.y += GetScreenHeight() - old_g_screen_height;
     old_g_screen_height = GetScreenHeight();
@@ -339,23 +377,28 @@ void Data_Manager::draw()
     content_tree.draw();
 }
 
+void Data_Manager::zero_coord_sys_origin()
+{
+    camera.coord_sys.origin = {double(plot_padding.x), double(GetScreenHeight() - plot_padding.y)};
+    camera.origin_offset = {0, 0};
+}
+
 void Data_Manager::fit_camera_to_plot()
 {
     if (plot_data.empty() && functions.empty())
 	return;
-    
-    double max_x = 0;
-    double min_x = 0;
-    double max_y = 0;
-    double min_y = 0;
+
+    double max_x = -HUGE_VAL, max_y = -HUGE_VAL, min_x = HUGE_VAL, min_y = HUGE_VAL;
 	
     for(const auto& pd : plot_data) {
 	if (!pd->x || !pd->info.visible)
 	    continue;
+	
 	for(double val : pd->x->y) {
 	    max_x = val > max_x ? val : max_x;
 	    min_x = val < min_x ? val : min_x;
 	}
+	
 	for(double val : pd->y) {
 	    max_y = val > max_y ? val : max_y;
 	    min_y = val < min_y ? val : min_y;
@@ -363,37 +406,88 @@ void Data_Manager::fit_camera_to_plot()
     }
 
     for(const auto& func : functions) {
-	if (!func->x)
+	if (!func->info.visible)
 	    continue;
-	for(double val : func->x->y) {
-	    max_x = val > max_x ? val : max_x;
-	    min_x = val < min_x ? val : min_x;
-	    double func_y = func->operator()(val);
-	    max_y = func_y > max_x ? func_y : max_x;
-	    min_y = func_y < min_x ? func_y : min_x;
+
+	for(size_t ix = 0; ix < size_t(GetScreenWidth()); ++ix)
+	{
+	    double camera_space_x = app_coordinate_system.transform_to(Vec2<double>{double(ix), 0} - camera.coord_sys.origin, camera.coord_sys).x - camera.origin_offset.x;
+	    double func_y = func->operator()(camera_space_x);
+	    max_y = func_y > max_y ? func_y : max_y;
+	    min_y = func_y < min_y ? func_y : min_y;
 	}
+    }
+
+    if (max_x != -HUGE_VAL && min_x != HUGE_VAL) {
+	camera.coord_sys.basis_x = { double(GetScreenWidth() - plot_padding.x * 2) / (max_x - min_x), 0 };
+	camera.origin_offset.x = min_x;
+    }
+    else {
+	camera.coord_sys.basis_x = { 1, 0 };
+	camera.origin_offset.x = 0;
+    }
+    
+    if (max_y != -HUGE_VAL && min_y != HUGE_VAL) {
+	camera.coord_sys.basis_y = { 0, -double(GetScreenHeight() - plot_padding.y * 2) / (max_y - min_y)};
+	camera.origin_offset.y = -min_y;
+    }
+    else {
+	camera.coord_sys.basis_y = { 0, -1};
+	camera.origin_offset.x = 0;
+    }
+}
+
+void Data_Manager::fit_camera_to_plot(Plot_Data *plot_data)
+{
+    double max_x = -HUGE_VAL, max_y = -HUGE_VAL, min_x = HUGE_VAL, min_y = HUGE_VAL;
+	
+    for(double val : plot_data->x->y) {
+	max_x = val > max_x ? val : max_x;
+	min_x = val < min_x ? val : min_x;
+    }
+    
+    for(double val : plot_data->y) {
+	max_y = val > max_y ? val : max_y;
+	min_y = val < min_y ? val : min_y;
     }
     
     camera.coord_sys.basis_x = { double(GetScreenWidth() - plot_padding.x * 2) / (max_x - min_x), 0 };
     camera.coord_sys.basis_y = { 0 , -double(GetScreenHeight() - plot_padding.y * 2) / (max_y - min_y)};
+    camera.origin_offset = { min_x, -min_y };
+}
+
+void Data_Manager::fit_camera_to_plot(Function* func)
+{
+    double max_y = -HUGE_VAL, min_y = HUGE_VAL;
+
+    for(size_t ix = 0; ix < size_t(GetScreenWidth()); ++ix)
+    {
+	double camera_space_x = app_coordinate_system.transform_to(Vec2<double>{double(ix), 0} - camera.coord_sys.origin, camera.coord_sys).x - camera.origin_offset.x;
+	double func_y = func->operator()(camera_space_x);
+	max_y = func_y > max_y ? func_y : max_y;
+	min_y = func_y < min_y ? func_y : min_y;
+    }
     
-    // TODO: move camera origin to the right place
+    camera.coord_sys.basis_y = { 0 , -double(GetScreenHeight() - plot_padding.y * 2) / (max_y - min_y)};
+    camera.origin_offset.y = -min_y;
 }
 
 void Text_Input::tokenize_input()
 {
     lexer = Lexer{};
     lexer.load_input_from_string(input);
-    tokens.clear();
-    while(lexer.next_token()) {
-	tokens.push_back(lexer.tkn);
-    }    
+    lexer.tokenize();
 }
 
 void Text_Input::update(Data_Manager& data_manager)
 {
+    int key = GetCharPressed();
+    
+    if ((key >= 97) && (key <= 122))
+	input_active = true;
+    
     if (IsKeyPressed(KEY_ENTER))
-	input_active = !input_active;
+	input_active = false;
 
     if (IsKeyPressed(KEY_ESCAPE)) {
 	input_active = false;
@@ -406,7 +500,6 @@ void Text_Input::update(Data_Manager& data_manager)
     if (input_active) {
 	g_keyboard_lock = true;
 	
-	int key = GetCharPressed();
 	while (key > 0) {
 	    if ((key >= 32) && (key <= 127)) {
 		input += (char)key;
@@ -419,19 +512,24 @@ void Text_Input::update(Data_Manager& data_manager)
 	    prev_input_size = input.size();
 	}
 	
-	if (IsKeyPressed(KEY_BACKSPACE) && !input.empty()) {
-	    if (IsKeyDown(KEY_LEFT_CONTROL)) {
-		input.erase(input.begin() + (tokens.back().ptr - lexer.get_input().c_str()), input.end());
-		tokenize_input();
-		prev_input_size = input.size();
+	if (IsKeyPressed(KEY_BACKSPACE)) {
+	    if (!input.empty()) {
+		if (IsKeyDown(KEY_LEFT_CONTROL)) {
+		    input.erase(input.begin() + (lexer.get_tokens().back().ptr - lexer.get_input().c_str()), input.end());
+		    tokenize_input();
+		    prev_input_size = input.size();
+		}
+		else {
+		    input.pop_back();
+		}
 	    }
 	    else {
-		input.pop_back();
+		input_active = false;
 	    }
 	}
     }
-    else if (!input.empty()) {
-	handle_command(data_manager, input);
+    else if (!lexer.get_input().empty()) {
+	handle_command(data_manager, lexer);
 	lexer = Lexer{};
 	input.clear();
     }
@@ -460,7 +558,8 @@ void Text_Input::draw()
 	if (!lexer.get_input().empty()) {
 	    Color color;
 	    int tkn_idx = 0;
-	    for(int i = 0; i < lexer.get_input().size(); ++i) {
+	    const std::vector<Token>& tokens = lexer.get_tokens();
+	    for(size_t i = 0; i < lexer.get_input().size(); ++i) {
 		str[0] = lexer.get_input()[i];
 
 		if (!tokens.empty()) {
@@ -474,7 +573,7 @@ void Text_Input::draw()
 			    color = DARKGREEN;
 			else if (tokens[tkn_idx].type >= tkn_int && tokens[tkn_idx].type <= tkn_false)
 			    color = BLUE;
-			else if (tokens[tkn_idx].type >= tkn_fit && tokens[tkn_idx].type <= tkn_extrema)
+			else if (tokens[tkn_idx].type >= tkn_fit && tokens[tkn_idx].type <= tkn_delete)
 			    color = MAROON;
 			else
 			    color = BLACK;

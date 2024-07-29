@@ -1,11 +1,12 @@
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
 #include <cstdio>
-#include <string_view>
 #include <string>
 #include <vector>
+#include <cstddef>
+#include <cstdint>
+#include <algorithm>
+#include <string_view>
 
 #include "utils.hpp"
 
@@ -38,6 +39,7 @@ enum Token_enum : uint32_t {
     tkn_smooth,
     tkn_interp,
     tkn_extrema, // data new = extrema data 1 10
+    tkn_delete,
 
     /* mutliple char operators */
     tkn_update_add,
@@ -47,6 +49,7 @@ enum Token_enum : uint32_t {
     tkn_update_pow,
     tkn_update_mod,
     tkn_pow,
+    tkn_range,
     
     tkn_SIZE,
 };
@@ -71,8 +74,7 @@ class Lexer {
 public:
     
     void load_input_from_string(std::string source);
-    bool next_token();
-    bool not_eof() { return tkn.type != tkn_eof; }
+    void tokenize();
     void print_token(Token& tkn, bool show_content = false) const;
 
     template<typename... Args>
@@ -100,17 +102,19 @@ public:
     int parsing_error_cnt = 0;
     int error_cnt = 0;
 
-    Token tkn;
-    Token next_tkn;
-
     const std::string& get_input() const { return input; }
+    std::vector<Token>& get_tokens() { return tkns; }
+
+    Token& tkn(size_t offset = 0) { return tkns[std::clamp(tkn_idx + offset, size_t(0), tkns.size())]; }
+    size_t tkn_idx = 0; // helper variable for the consumer of tkns;
 
 private:
 
     bool get_next_token();
-    bool push(Token next_tkn) { this->next_tkn = next_tkn; return true; }
+    bool push(Token tkn) { tkns.push_back(tkn); return true; }
 
     std::string input;
+    std::vector<Token> tkns;
     char* p_begin = nullptr;
     char* p = nullptr;
     char* eof = nullptr;

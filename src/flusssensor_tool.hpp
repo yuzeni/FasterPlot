@@ -8,7 +8,7 @@
 #include "utils.hpp"
 #include "lexer.hpp"
 
-constexpr int graph_color_array_cnt = 21;
+constexpr int graph_color_array_cnt = 20;
 inline Color graph_color_array[graph_color_array_cnt] = {
     
     MAROON,
@@ -19,7 +19,7 @@ inline Color graph_color_array[graph_color_array_cnt] = {
     BLUE,
     DARKBLUE,
     RED,
-    YELLOW,
+    // YELLOW,
     GOLD,
     ORANGE,
     PINK,
@@ -69,6 +69,7 @@ struct Content_Tree
     {
 	content_elements.push_back(elem);
     }
+    void delete_element(Content_Tree_Element* elem);
     
 private:
     Content_Tree_Element base_element;
@@ -116,7 +117,7 @@ struct Function
 {
     Plot_Info info;
     Function_Type type = FT_undefined;
-    Plot_Data* x = nullptr;
+    // Plot_Data* x = nullptr;
     Content_Tree_Element content_element;
     Plot_Data* fit_from_data = nullptr;
     
@@ -138,12 +139,12 @@ struct Function
 	return false;
     }
 
-    size_t size()
-    {
-	if(x)
-	    return x->y.size();
-	return 0;
-    };
+    // size_t size()
+    // {
+    // 	if(x)
+    // 	    return x->y.size();
+    // 	return 0;
+    // };
 
     void update_content_tree_element(size_t index);
     
@@ -199,14 +200,19 @@ struct Data_Manager
     const Vec2<int> plot_padding = {50, 50};
 
     void new_plot_data(Plot_Data* data = nullptr);
+    void delete_plot_data(Plot_Data *data);
     void new_function();
+    void delete_function(Function *function);
+    void fit_camera_to_plot(Plot_Data* plot_data);
+    void fit_camera_to_plot(Function* func);
+    void zero_coord_sys_origin();
     
 private:
 
     Plot_Data default_x;
     int graph_color_array_idx = 0;
     Content_Tree content_tree;
-    
+
     void fit_camera_to_plot();
     void draw_plot_data();
     void draw_functions();
@@ -224,7 +230,6 @@ private:
     bool input_active = false;
     std::string input;
     Lexer lexer;
-    std::vector<Token> tokens;
     bool show_cursor = true;
 };
 

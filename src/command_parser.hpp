@@ -52,6 +52,7 @@ enum Operator_Type {
     OP_show,
     OP_hide,
     OP_extrema,
+    OP_delete,
     OP_SIZE,
 };
 
@@ -72,6 +73,7 @@ inline const char *operator_type_name_table[OP_SIZE] {
     "show",
     "hide",
     "extrema",
+    "delete",
 };
 
 inline int op_arg_cnt_table[OP_SIZE] {
@@ -91,6 +93,7 @@ inline int op_arg_cnt_table[OP_SIZE] {
     1,
     1,
     1,
+    1,
 };
 
 struct Command_Operator
@@ -103,4 +106,4 @@ struct Command_Operator
 // command structure:
 // object (to be changed or created) = operator (+,-,fit) object_A (unary) object_B (binary)
 struct Data_Manager;
-void handle_command(Data_Manager &data_manager, std::string cmd);
+void handle_command(Data_Manager &data_manager, Lexer& lexer);

@@ -42,6 +42,7 @@ static const char *token_name_table[tkn_SIZE - 256]{
     "smooth",
     "interp",
     "extrema",
+    "delete",
     
     "+=",
     "-=",
@@ -50,6 +51,7 @@ static const char *token_name_table[tkn_SIZE - 256]{
     "**=",
     "%=",
     "**",
+    "..",
 };
 
 constexpr const char *get_mul_char_token_name(Token_enum tkn)
@@ -95,6 +97,7 @@ Token_enum keyword_compare(const std::string_view sv)
     case cte_hash_c_str("smooth"): return tkn_smooth;
     case cte_hash_c_str("interp"): return tkn_interp;
     case cte_hash_c_str("extrema"): return tkn_extrema;
+    case cte_hash_c_str("delete"): return tkn_delete;
     default: return tkn_ident;
     }
 }
@@ -188,17 +191,25 @@ void Lexer::after_load_init()
     eof = p + input.size();
 }
 
-bool Lexer::next_token() {
-    if (tkn.type == tkn_none)
+void Lexer::tokenize()
+{
+    while(tkns.empty() || (tkns.back().type != tkn_eof && tkns.back().type != tkn_parse_error)) {
 	get_next_token();
-    get_next_token();
-    return tkn.type != tkn_eof && tkn.type != tkn_parse_error;
+    }
+}
+
+static bool float_point_check(char *p, char *eof)
+{
+    if (*p == '.') {
+	if (p + 1 != eof && p[1] == '.')
+	    return false;
+	return true;
+    }
+    return false;
 }
 
 bool Lexer::get_next_token()
 {
-    tkn = next_tkn;
-    
     if (p == eof)
 	p = nullptr;
     if (!p)
@@ -237,18 +248,18 @@ bool Lexer::get_next_token()
 	    ++p;
 	std::string_view sv(begin, p);
 	bool result = push(Token{tkn_ident, begin, p, &sv});
-	next_tkn.type = keyword_compare(next_tkn.sv);
+	tkns.back().type = keyword_compare(tkns.back().sv);
 	return result;
     }
     
     // TODO: handle INF, INFINITY, NAN, etc.
     // check for numbers
-    if (p != eof && (is_digit(*p) || (((p[0] == '.') || (p[0] == '+') || (p[0] == '-')) && is_digit(*(p + 1))))) {
+    if (p != eof && (is_digit(*p) || ((float_point_check(p, eof) || (p[0] == '+') || (p[0] == '-')) && is_digit(*(p + 1))))) {
 	bool has_point = (*p == '.');
 	bool has_exp = false;
 	char* begin = p;
 	++p;
-	while (p != eof && (is_digit(*p) || *p == '.' || is_alpha(*p))) {
+	while (p != eof && (is_digit(*p) || float_point_check(p, eof) || is_alpha(*p))) {
 	    if (has_point && (*p == '.'))
 		break;
 	    has_point |= (*p == '.');
@@ -279,9 +290,9 @@ bool Lexer::get_next_token()
 	++p;
 	return push(Token{tkn_string, begin, p, &sv});
     }
-
-    // check for operators
-    for(uint32_t i = tkn_update_add; i <= tkn_pow; ++i) {
+    
+    // check for operators | before number check because of operator '..'
+    for(uint32_t i = tkn_update_add; i <= tkn_range; ++i) {
 	auto opt_tkn = check_for_operator(&p, eof, Token_enum(i), get_mul_char_token_name(Token_enum(i)));
 	if(opt_tkn)
 	    return push(opt_tkn.value());
@@ -296,9 +307,9 @@ bool Lexer::get_next_token()
     if (p == eof) return push(Token{tkn_eof, eof, eof});
 
     // when stuck, just get the next token.
-    parsing_error(next_tkn, "Failed to parse the character after this token.");
+    parsing_error(tkns.back(), "Failed to parse the character after this token.");
     ++p;
-    return next_token();
+    return get_next_token();
 }
 
 void Lexer::print_token(Token &tkn, bool show_content) const
