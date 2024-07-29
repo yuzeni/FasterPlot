@@ -8,3 +8,8 @@ compile_flags.txt
 \#*\#
 *~
 .\#*
+
+# visual studio
+*.obj
+*.pdb
+*.sln

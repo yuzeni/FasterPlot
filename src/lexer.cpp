@@ -34,7 +34,9 @@ static const char *token_name_table[tkn_SIZE - 256]{
     "new",
     "points",
     "lines",
+    "index",
     "x",
+    "y",
     "show",
     "hide",
     "smooth",
@@ -85,7 +87,9 @@ Token_enum keyword_compare(const std::string_view sv)
     case cte_hash_c_str("new"): return tkn_new;
     case cte_hash_c_str("points"): return tkn_points;
     case cte_hash_c_str("lines"): return tkn_lines;
+    case cte_hash_c_str("index"): return tkn_index;
     case cte_hash_c_str("x"): return tkn_x;
+    case cte_hash_c_str("y"): return tkn_y;
     case cte_hash_c_str("show"): return tkn_show;
     case cte_hash_c_str("hide"): return tkn_hide;
     case cte_hash_c_str("smooth"): return tkn_smooth;

@@ -82,6 +82,7 @@ enum Plot_Type
 {
     PT_DISCRETE = 1,
     PT_INTERP_LINEAR = 1 << 1,
+    PT_SHOW_INDEX = 1 << 2,
 };
 
 struct Plot_Info

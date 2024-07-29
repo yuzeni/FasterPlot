@@ -81,7 +81,12 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
         break;
     case tkn_int:
     case tkn_real:
+    case tkn_true:
+    case tkn_false:
     case tkn_sinusoid:
+    case tkn_points:
+    case tkn_lines:
+    case tkn_index:
 	object.type = OT_value;
 	break;
     default:
@@ -236,7 +241,7 @@ void op_fit_assign(Lexer& lexer, Command_Object object, Command_Operator op, Com
     }
 }
 
-void op_extrema_assign(Lexer& lexer, Data_Manager& data_manager, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary) {
+void op_extrema_assign(Lexer& lexer, Data_Manager& data_manager, Command_Object object, Command_Operator op, Command_Object arg_unary) {
 
     if (object.type != OT_plot_data) {
 	lexer.parsing_error(object.tkn, "Expected data, but got '%s'.", object_type_name_table[object.type]);
@@ -248,16 +253,16 @@ void op_extrema_assign(Lexer& lexer, Data_Manager& data_manager, Command_Object 
 	return;
     }    
 
-    if (arg_binary.type != OT_value || arg_binary.tkn.type != tkn_int) {
-	lexer.parsing_error(arg_binary.tkn, "The argument type '%s' is not supported by the operation '%s'",
-			    get_token_name_str(arg_binary.tkn.type).c_str(), operator_type_name_table[op.type]);
-	return;
-    }
+    // if (arg_binary.type != OT_value || arg_binary.tkn.type != tkn_int) {
+    // 	lexer.parsing_error(arg_binary.tkn, "The argument type '%s' is not supported by the operation '%s'",
+    // 			    get_token_name_str(arg_binary.tkn.type).c_str(), operator_type_name_table[op.type]);
+    // 	return;
+    // }
 
     data_manager.new_plot_data();
     object.obj.plot_data->x = data_manager.plot_data.back();
     
-    get_extrema_plot_data(object.obj.plot_data, arg_unary.obj.plot_data, arg_binary.tkn.i);
+    get_extrema_plot_data(object.obj.plot_data, arg_unary.obj.plot_data);
 }
 
 void execute_assign_operation(Lexer& lexer, Data_Manager& data_manager, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary) {
@@ -294,7 +299,7 @@ void execute_assign_operation(Lexer& lexer, Data_Manager& data_manager, Command_
 	op_fit_assign(lexer, object, op, arg_unary, arg_binary);
 	break;
     case OP_extrema:
-	op_extrema_assign(lexer, data_manager, object, op, arg_unary, arg_binary);
+	op_extrema_assign(lexer, data_manager, object, op, arg_unary);
 	break;
     }
 }
@@ -446,15 +451,60 @@ void handle_command(Data_Manager &data_manager, std::string cmd)
 	arg_unary = expect_command_object(data_manager, lexer);
 	if (arg_unary.is_undefined())
 	    return;
-	if (arg_unary.type != OT_plot_data && arg_unary.type != OT_function) {
-	    lexer.parsing_error(lexer.tkn, "Expected data or function, but got '%s'.", object_type_name_table[arg_unary.type]);
-	    return;
-	}
-
-	if (arg_unary.type == OT_plot_data)
+	
+	if (arg_unary.type == OT_plot_data) {
 	    arg_unary.obj.plot_data->info.visible = op.type == OP_show ? true : false;
-	else if (arg_unary.type == OT_function)
+	}
+	else if (arg_unary.type == OT_function) {
 	    arg_unary.obj.function->info.visible = op.type == OP_show ? true : false;
+	}
+	else if (arg_unary.type == OT_value) {
+	    arg_binary = expect_command_object(data_manager, lexer);
+	    if (arg_binary.is_undefined())
+		return;
+
+	    Plot_Type plot_type;
+	    switch (arg_unary.tkn.type) {
+	    case tkn_points:
+		plot_type = PT_DISCRETE;
+		break;
+	    case tkn_lines:
+		plot_type = PT_INTERP_LINEAR;
+		break;
+	    case tkn_index:
+		plot_type = PT_SHOW_INDEX;
+		break;
+	    default:
+		plot_type = Plot_Type(0);
+	    }
+
+	    if (arg_binary.type == OT_plot_data) {
+		if (op.type == OP_show)
+		    arg_binary.obj.plot_data->info.plot_type = add_flag(arg_binary.obj.plot_data->info.plot_type, plot_type);
+		else if (op.type == OP_hide)
+		    arg_binary.obj.plot_data->info.plot_type = remove_flag(arg_binary.obj.plot_data->info.plot_type, plot_type);
+	    }
+	    else if (arg_binary.type == OT_function) {
+		if (plot_type != PT_SHOW_INDEX) {
+		    if (op.type == OP_show)
+			arg_binary.obj.function->info.plot_type = add_flag(arg_binary.obj.function->info.plot_type, plot_type);
+		    else if (op.type == OP_hide)
+			arg_binary.obj.function->info.plot_type = remove_flag(arg_binary.obj.function->info.plot_type, plot_type);
+		}
+		else {
+		    lexer.parsing_error(arg_binary.tkn, "The operator '%' with binary argument '%' doesn't work with '%s'.",
+					operator_type_name_table[op.type], object_type_name_table[arg_binary.type], get_token_name_str(arg_unary.tkn.type).c_str());
+		}
+	    }
+	    else {
+		lexer.parsing_error(arg_binary.tkn, "The operator '%' doesn't work with '%s'.",
+				    operator_type_name_table[op.type], object_type_name_table[arg_binary.type]);
+	    }
+	}
+	else {
+	    lexer.parsing_error(arg_unary.tkn, "The operator '%' doesn't work with '%s'.",
+				operator_type_name_table[op.type], object_type_name_table[arg_unary.type]);
+	}
 	return;
     }
 
@@ -491,5 +541,4 @@ void handle_command(Data_Manager &data_manager, std::string cmd)
     }
 
     execute_assign_operation(lexer, data_manager, object, op, arg_unary, arg_binary);
-
 }

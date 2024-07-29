@@ -90,7 +90,7 @@ inline int op_arg_cnt_table[OP_SIZE] {
     2,
     1,
     1,
-    2,
+    1,
 };
 
 struct Command_Operator

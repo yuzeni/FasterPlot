@@ -30,7 +30,9 @@ enum Token_enum : uint32_t {
     tkn_new,
     tkn_points, // add // show points data 1
     tkn_lines, // add // hide lines data 1
+    tkn_index,
     tkn_x,
+    tkn_y,
     tkn_show,
     tkn_hide,
     tkn_smooth,

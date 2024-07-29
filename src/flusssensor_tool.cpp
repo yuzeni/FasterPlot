@@ -47,6 +47,10 @@ constexpr int TEXT_INPUT_FONT_SIZE = 20;
 constexpr float TEXT_INPUT_MIN_BOX_SIZE = 100;
 constexpr double TEXT_INPUT_CURSO_BLINK_TIME = 0.5; // in seconds
 
+// plot data
+constexpr int PLOT_DATA_FONT_SIZE = 18;
+constexpr Font* PLOT_DATA_FONT = &g_app_font_18;
+
 void Plot_Data::update_content_tree_element(size_t index)
 {
     content_element.name = "data " + std::to_string(index) + (!info.header.empty() ? " '" + info.header + "'" : "");
@@ -187,6 +191,10 @@ void Data_Manager::draw_plot_data()
 	    if(pd->info.plot_type & PT_INTERP_LINEAR) {
 		if(ix > 0)
 		    DrawLineEx(prev_screen_space_point, screen_space_point, pd->info.thickness / 3.f, pd->info.color);
+	    }
+	    if(pd->info.plot_type & PT_SHOW_INDEX) {
+		DrawTextEx(*PLOT_DATA_FONT, std::to_string(ix).c_str(), Vector2{float(screen_space_point.x + 2.0), float(screen_space_point.y + 2.0)},
+			   PLOT_DATA_FONT_SIZE, 0, pd->info.color);
 	    }
 	    prev_screen_space_point = screen_space_point;
 	}

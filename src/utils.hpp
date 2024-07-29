@@ -3,6 +3,7 @@
 #include "raylib.h"
 
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <vector>
 #include <string>
@@ -65,3 +66,28 @@ consteval uint64_t cte_hash_c_str(const char *str, uint64_t hash = utils::defaul
 }
 
 uint64_t hash_string_view(std::string_view s_v, uint64_t hash = utils::default_str_hash_value);
+
+template <typename T>
+T add_flag(T var, T flag)
+{
+    uint64_t var_int = uint64_t(var);
+    var_int |= uint64_t(flag);
+    return T(var_int);
+}
+
+template <typename T>
+T remove_flag(T var, T flag)
+{
+    uint64_t var_int = uint64_t(var);
+    if (var_int & uint64_t(flag))
+	    var_int -= uint64_t(flag);
+    return T(var_int);
+}
+
+template <typename T>
+bool check_flag(T var, T flag)
+{
+    if (uint64_t(var) & uint64_t(flag))
+	return true;
+    return false;
+}

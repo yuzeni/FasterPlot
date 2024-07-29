@@ -70,36 +70,36 @@ void fit_sinusoid_plot_data(Plot_Data *plot_data, Function *function)
     function->func.sinusoid.fit_to_data(plot_data);
 }
 
-bool get_extrema_plot_data(Plot_Data *object_plot_data, Plot_Data *plot_data, int window_size)
+bool get_extrema_plot_data(Plot_Data *object_plot_data, Plot_Data *plot_data)
 {
     if (plot_data->y.empty() || !plot_data->x)
 	return false;
 
-    std::vector<double> smooth_plot_data_y;
-    for(size_t ix = 0; ix < plot_data->size(); ++ix)
-    {
-	double sum = 0;
-	for (int iw = - window_size; iw <= window_size; ++iw) {
-	    sum += plot_data->y[std::clamp(int(ix) + iw, 0, int(plot_data->size() - 1))];
-	}
-	smooth_plot_data_y.push_back(sum / double(2 * window_size + 1));
-    }
+    // std::vector<double> smooth_plot_data_y;
+    // for(size_t ix = 0; ix < plot_data->size(); ++ix)
+    // {
+    // 	double sum = 0;
+    // 	for (int iw = - window_size; iw <= window_size; ++iw) {
+    // 	    sum += plot_data->y[std::clamp(int(ix) + iw, 0, int(plot_data->size() - 1))];
+    // 	}
+    // 	smooth_plot_data_y.push_back(sum / double(2 * window_size + 1));
+    // }
 
     object_plot_data->y.clear();
 
-    double prev_val = smooth_plot_data_y[0];
-    double val = smooth_plot_data_y[1];
-    bool going_up = val > prev_val;
+    double prev_val = plot_data->y[0];
+    double val = plot_data->y[1];
+    bool going_up = val >= prev_val;
 	
-    for(size_t ix = 2; ix < smooth_plot_data_y.size(); ++ix)
+    for(size_t ix = 2; ix < plot_data->y.size(); ++ix)
     {
-	val = smooth_plot_data_y[ix];
-	prev_val = smooth_plot_data_y[ix - 1];
+	val = plot_data->y[ix];
+	prev_val = plot_data->y[ix - 1];
 	if ((going_up && val < prev_val) || (!going_up && val > prev_val)) {
 	    object_plot_data->y.push_back(plot_data->y[ix]);
 	    object_plot_data->x->y.push_back(plot_data->x->y[ix]);
 	}
-	going_up = val > prev_val;
+	going_up = val >= prev_val;
     }
     return true;
 
