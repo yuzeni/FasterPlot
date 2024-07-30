@@ -229,6 +229,7 @@ void Data_Manager::add_plot_data(std::string file)
     for(const auto data : data_list) {
 	new_plot_data(data);
     }
+    fit_camera_to_plot();
 }
 
 void Data_Manager::draw()
@@ -435,11 +436,12 @@ void Data_Manager::update_element_indices()
     }
 }
 
-static void get_valid_file_name_and_ensure_directory(std::string& file_name)
+static bool get_valid_file_name_and_ensure_directory(std::string& file_name)
 {
-    if(!(std::filesystem::exists(EXPORT_DIRECTORY))){
+    if (!(std::filesystem::exists(EXPORT_DIRECTORY))) {
         if (!(std::filesystem::create_directory(EXPORT_DIRECTORY))) {
 	    logger.log_error("Failed to create directory '%s', please create it manually.", EXPORT_DIRECTORY);
+	    return false;
 	}
     }
     
@@ -449,14 +451,16 @@ static void get_valid_file_name_and_ensure_directory(std::string& file_name)
     
     int file_idx = 1;
     while (file_exists(file_name)) {
-	file_name = orig_file_name + "_(" + std::to_string(file_idx) + ")" EXPORT_FILE_TYPE;
+	file_name = orig_file_name + "(" + std::to_string(file_idx) + ")" EXPORT_FILE_TYPE;
 	++file_idx;
     }
+    return true;
 }
 
 void Data_Manager::export_plot_data(std::string file_name, std::vector<Plot_Data*>& plot_data)
 {
-    get_valid_file_name_and_ensure_directory(file_name);
+    if (!get_valid_file_name_and_ensure_directory(file_name))
+	return;
     
     std::ofstream out_file;
     out_file.open(file_name);
@@ -487,7 +491,8 @@ void Data_Manager::export_plot_data(std::string file_name, std::vector<Plot_Data
 
 void Data_Manager::export_functions(std::string file_name, std::vector<Function*>& functions)
 {
-    get_valid_file_name_and_ensure_directory(file_name);
+    if (!get_valid_file_name_and_ensure_directory(file_name))
+	return;
     
     std::ofstream out_file;
     out_file.open(file_name);

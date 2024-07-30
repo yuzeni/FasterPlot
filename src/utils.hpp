@@ -27,6 +27,42 @@ struct Log_Msg
 
 constexpr int LOG_OUTPUT_ERROR_MSG_SIZE = 1024;
 
+#  define UTILS_BLACK           "\033[30m"
+#  define UTILS_RED             "\033[31m"
+#  define UTILS_GREEN           "\033[32m"
+#  define UTILS_YELLOW          "\033[33m"
+#  define UTILS_BLUE            "\033[34m"
+#  define UTILS_MAGENTA         "\033[35m"
+#  define UTILS_CYAN            "\033[36m"
+#  define UTILS_WHITE           "\033[37m"
+#  define UTILS_BRIGHT_BLACK    "\033[90m"
+#  define UTILS_BRIGHT_RED      "\033[91m"
+#  define UTILS_BRIGHT_GREEN    "\033[92m"
+#  define UTILS_BRIGHT_YELLOW   "\033[93m"
+#  define UTILS_BRIGHT_BLUE     "\033[94m"
+#  define UTILS_BRIGHT_MAGENTA  "\033[95m"
+#  define UTILS_BRIGHT_CYAN     "\033[96m"
+#  define UTILS_BRIGHT_WHITE    "\033[97m"
+#  define UTILS_BLACK_BG           "\033[107m"
+#  define UTILS_RED_BG             "\033[107m"
+#  define UTILS_GREEN_BG           "\033[107m"
+#  define UTILS_YELLOW_BG          "\033[107m"
+#  define UTILS_BLUE_BG            "\033[107m"
+#  define UTILS_MAGENTA_BG         "\033[107m"
+#  define UTILS_CYAN_BG            "\033[107m"
+#  define UTILS_WHITE_BG           "\033[107m"
+#  define UTILS_BRIGHT_BLACK_BG    "\033[107m"
+#  define UTILS_BRIGHT_RED_BG      "\033[107m"
+#  define UTILS_BRIGHT_GREEN_BG    "\033[107m"
+#  define UTILS_BRIGHT_YELLOW_BG   "\033[107m"
+#  define UTILS_BRIGHT_BLUE_BG     "\033[107m"
+#  define UTILS_BRIGHT_MAGENTA_BG  "\033[107m"
+#  define UTILS_BRIGHT_CYAN_BG     "\033[107m"
+#  define UTILS_BRIGHT_WHITE_BG    "\033[107m"
+#  define UTILS_END_COLOR "\033[0m"
+
+#define UTILS_ERROR_COLOR UTILS_BRIGHT_RED
+
 struct Logger {
 
     void add_msg(Log_Msg log_msg) { log_msgs.push_back(log_msg); }
@@ -40,34 +76,31 @@ struct Logger {
 	    log_error("Last error message did not fit in the buffer of size %d.", LOG_OUTPUT_ERROR_MSG_SIZE);
 	}
 	else {
-	    printf("ERROR: %s\n", buffer);
+	    printf(UTILS_ERROR_COLOR "ERROR:" UTILS_END_COLOR " %s\n", buffer);
 	    log_msgs.push_back({"ERROR: ", RED});
+	    log_msgs.push_back({buffer, BLACK});
+	}
+	++error_cnt;
+    }
+
+    template <typename... Args>
+    void log_info(const char *msg, Args... args)
+    {
+	char buffer[LOG_OUTPUT_ERROR_MSG_SIZE];
+	int true_size = snprintf(buffer, LOG_OUTPUT_ERROR_MSG_SIZE, msg, args...);
+	if(true_size > LOG_OUTPUT_ERROR_MSG_SIZE) {
+	    log_error("Last error message did not fit in the buffer of size %d.", LOG_OUTPUT_ERROR_MSG_SIZE);
+	}
+	else {
+	    printf("%s", buffer);
 	    log_msgs.push_back({buffer, BLACK});
 	}
     }
 
+
     std::vector<Log_Msg> log_msgs;
+    size_t error_cnt = 0;
 };
-
-// #define ERROR_MSG_SIZE 1024
-
-// #define UTILS_ERROR_COLOR "\033[91m"
-// #define UTILS_END_COLOR   "\033[0m"
-
-// template <typename... Args>
-// void log_error(const char *msg, Args... args)
-// {
-//     char buffer[ERROR_MSG_SIZE];
-//     int true_size = snprintf(buffer, ERROR_MSG_SIZE, msg, args...);
-//     if(true_size > ERROR_MSG_SIZE) {
-// 	log_error("Last error message did not fit in the buffer of size %d.", ERROR_MSG_SIZE);
-//     }
-//     else {
-// 	printf(UTILS_ERROR_COLOR "ERROR:" UTILS_END_COLOR " %s\n", buffer);
-//     }
-// }
-
-// #undef ERROR_MSG_SIZE
 
 template <typename T>
 struct Vec2
@@ -131,3 +164,5 @@ inline bool file_exists(const std::string& file_name)
     std::ifstream file(file_name);
     return file.good();
 }
+
+std::string get_file_extension(std::string file_name);

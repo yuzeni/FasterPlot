@@ -1,6 +1,7 @@
 
 #include "command_parser.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 
@@ -10,8 +11,12 @@
 #include "object_operations.hpp"
 #include "data_manager.hpp"
 
-static bool expect_next_token(Lexer &lexer) {
+std::vector<std::string> g_all_commands;
 
+static void handle_command_impl(Data_Manager &data_manager, Lexer &lexer);
+
+static bool expect_next_token(Lexer &lexer)
+{
     ++lexer.tkn_idx;
     if(lexer.get_tokens().empty()) {
 	logger.log_error("Expected another token at the end of the command.");
@@ -121,12 +126,14 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
         break;
     case tkn_int:
     case tkn_real:
+    case tkn_string:
     case tkn_true:
     case tkn_false:
     case tkn_sinusoid:
     case tkn_points:
     case tkn_lines:
     case tkn_index:
+    case tkn_script:
 	object.type = OT_value;
 	break;
     default:
@@ -192,6 +199,12 @@ static Command_Operator get_command_operator(Token tkn)
 	break;
     case tkn_export:
 	op.type = OP_export;
+	break;
+    case tkn_run:
+	op.type = OP_run;
+	break;
+    case tkn_save:
+	op.type = OP_save;
 	break;
     }
     return op;
@@ -262,7 +275,8 @@ void op_unary_assign(Command_Object object, Command_Object arg_unary)
     }
 }
 
-void op_fit_assign(Lexer& lexer, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary) {
+void op_fit_assign(Lexer &lexer, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary)
+{
 
     if (object.type != OT_function) {
 	lexer.parsing_error(object.tkn, "Expected function, but got '%s'.", object_type_name_table[object.type]);
@@ -287,7 +301,8 @@ void op_fit_assign(Lexer& lexer, Command_Object object, Command_Operator op, Com
     }
 }
 
-void op_extrema_assign(Lexer& lexer, Data_Manager& data_manager, Command_Object object, Command_Operator op, Command_Object arg_unary) {
+void op_extrema_assign(Lexer &lexer, Data_Manager &data_manager, Command_Object object, Command_Operator op, Command_Object arg_unary)
+{
 
     if (object.type != OT_plot_data) {
 	lexer.parsing_error(object.tkn, "Expected data, but got '%s'.", object_type_name_table[object.type]);
@@ -305,8 +320,8 @@ void op_extrema_assign(Lexer& lexer, Data_Manager& data_manager, Command_Object 
     get_extrema_plot_data(object.obj.plot_data, arg_unary.obj.plot_data);
 }
 
-void execute_assign_operation(Lexer& lexer, Data_Manager& data_manager, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary) {
-
+void execute_assign_operation(Lexer &lexer, Data_Manager &data_manager, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary)
+{
     switch(op.type) {
     case OP_add:
 	op_binary_assign(lexer, object, op, arg_unary, arg_binary, add_op);
@@ -371,7 +386,8 @@ double op_binary_value(Command_Object arg_unary, Command_Object arg_binary, doub
     return op_fun(a1, a2);
 }
 
-static double execute_operation_value(Command_Operator op, Command_Object arg_unary, Command_Object arg_binary, Lexer& lexer) {
+static double execute_operation_value(Command_Operator op, Command_Object arg_unary, Command_Object arg_binary, Lexer &lexer)
+{
 
     switch(op.type) {
     case OP_add:
@@ -435,7 +451,7 @@ static bool expand_iterators(Data_Manager &data_manager, Lexer &lexer)
 	    tkns.erase(tkns.begin() + tkn_idx);
 	    for (int64_t it : *(iterator.itr)) {
 		tkns.insert(tkns.begin() + tkn_idx, Token{tkn_int, iterator.ptr, iterator.ptr + iterator.size, &it});
-		handle_command(data_manager, lexer);
+		handle_command_impl(data_manager, lexer);
 		tkns.erase(tkns.begin() + tkn_idx);
 	    }
 	    iterator.delete_itr();
@@ -447,8 +463,45 @@ static bool expand_iterators(Data_Manager &data_manager, Lexer &lexer)
     return false;
 }
 
-void handle_command(Data_Manager &data_manager, Lexer& lexer)
+void handle_command_file(Data_Manager &data_manager, std::string file)
 {
+    std::string cmd;
+    size_t error_cnt = logger.error_cnt;
+    size_t i = 0;
+    while (i < file.size()) {
+	size_t i_begin = i;
+	while(i < file.size() && file[i] != '\n') {
+	    ++i;
+	}
+	cmd = file.substr(i_begin, i - i_begin);
+	Lexer lexer;
+	lexer.get_input() = cmd;
+	lexer.tokenize();
+	handle_command_impl(data_manager, lexer);
+	if (error_cnt != logger.error_cnt) {
+	    logger.log_info(UTILS_BRIGHT_GREEN "Exiting script due to error.\n" UTILS_END_COLOR);
+	    break;
+	}
+	++i;
+    }
+}
+
+void handle_command(Data_Manager &data_manager, Lexer &lexer)
+{
+    size_t error_cnt = logger.error_cnt;
+    g_all_commands.push_back(lexer.get_input());
+    
+    handle_command_impl(data_manager, lexer);
+    
+    if (error_cnt != logger.error_cnt) {
+	g_all_commands.pop_back();
+    }
+}
+
+static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
+{
+
+    size_t error_cnt = logger.error_cnt;
     
     Command_Object object, arg_unary, arg_binary, arg_tertiary;
     Command_Operator op = get_command_operator(lexer.tkn());
@@ -679,6 +732,8 @@ void handle_command(Data_Manager &data_manager, Lexer& lexer)
 		    }
 		}
 		break;
+	    default:
+		lexer.parsing_error(arg_unary.tkn, "Value type '%s', is not supported.", get_token_name_str(arg_unary.tkn.type).c_str());
 	    }
 	}
 	else {
@@ -691,36 +746,74 @@ void handle_command(Data_Manager &data_manager, Lexer& lexer)
 	arg_unary = expect_command_object(data_manager, lexer);
 	if (arg_unary.is_undefined())
 	    goto exit;
-
-	std::string file_name = DEFAULT_EXPORT_FILE_NAME;
-
-
-	if (lexer.tkn(1).type == tkn_string) {
-	    ++lexer.tkn_idx;
-	    file_name = lexer.tkn().sv;
-	}
-
-	switch (arg_unary.type) {
-	case OT_plot_data:
 	{
-	    std::vector<Plot_Data*> plot_data {arg_unary.obj.plot_data};
-	    data_manager.export_plot_data(file_name, plot_data);
-	}
+	    std::string file_name = DEFAULT_EXPORT_FILE_NAME;
+
+	    if (lexer.tkn(1).type == tkn_string) {
+		++lexer.tkn_idx;
+		file_name = lexer.tkn().sv;
+	    }
+
+	    switch (arg_unary.type) {
+	    case OT_plot_data:
+	    {
+		std::vector<Plot_Data*> plot_data {arg_unary.obj.plot_data};
+		data_manager.export_plot_data(file_name, plot_data);
+	    }
 	    break;
-	case OT_plot_data_itr:
-	    data_manager.export_plot_data(file_name, *arg_unary.obj.plot_data_itr);
+	    case OT_plot_data_itr:
+		data_manager.export_plot_data(file_name, *arg_unary.obj.plot_data_itr);
+		break;
+	    case OT_function:
+	    {
+		std::vector<Function*> functions {arg_unary.obj.function};
+		data_manager.export_functions(file_name, functions);
+	    }
 	    break;
-	case OT_function:
-	{
-	    std::vector<Function*> functions {arg_unary.obj.function};
-	    data_manager.export_functions(file_name, functions);
+	    case OT_function_itr:
+		data_manager.export_functions(file_name, *arg_unary.obj.function_itr);
+		break;
+	    }
 	}
-	break;
-	case OT_function_itr:
-	    data_manager.export_functions(file_name, *arg_unary.obj.function_itr);
-	    break;
+	goto exit;
+
+    case OP_run:
+	if (lexer.tkn(1).type != tkn_script) {
+	    lexer.parsing_error(lexer.tkn(1), "Expected keyword 'script'.");
+	    goto exit;
 	}
+	++lexer.tkn_idx;
 	
+	arg_binary = expect_command_object(data_manager, lexer);
+	if (arg_binary.is_undefined())
+	    goto exit;
+
+	if (arg_binary.tkn.type != tkn_string) {
+	    lexer.parsing_error(arg_binary.tkn, "Expected the filename of the script.");
+	    goto exit;
+	}
+
+	run_command_file(data_manager, std::string(arg_binary.tkn.sv));
+	goto exit;
+	
+    case OP_save:
+	if (lexer.tkn(1).type != tkn_script) {
+	    lexer.parsing_error(lexer.tkn(1), "Expected keyword 'script'.");
+	    goto exit;
+	}
+	++lexer.tkn_idx;
+
+	arg_binary = expect_command_object(data_manager, lexer);
+	if (arg_binary.is_undefined())
+	    goto exit;
+
+	if (arg_binary.tkn.type != tkn_string) {
+	    lexer.parsing_error(arg_binary.tkn, "Expected the filename of the script.");
+	    goto exit;
+	}
+
+	g_all_commands.pop_back(); // remove the cmd for saving the script
+	save_command_file(g_all_commands, std::string(arg_binary.tkn.sv));
 	goto exit;
     }
 
@@ -766,4 +859,13 @@ exit:
     
     lexer.tkn_idx = 0;
     data_manager.update_references();
+    if (error_cnt == logger.error_cnt) {
+	logger.log_info("> ");
+	for (auto& tkn : lexer.get_tokens()) {
+	    lexer.log_token(tkn);
+	}
+	logger.log_info("\n");
+    }
+    // logger.log_info("%s\n", lexer.get_input().c_str());
 }
+

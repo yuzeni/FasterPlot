@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
 struct Plot_Data;
 struct Function;
 struct Data_Manager;
@@ -14,4 +17,8 @@ bool smooth_plot_data(Plot_Data *plot_data, int window_size);
 
 void fit_sinusoid_plot_data(Plot_Data *plot_data, Function *function);
 
-bool get_extrema_plot_data(Plot_Data* object_plot_data, Plot_Data* plot_data);
+bool get_extrema_plot_data(Plot_Data *object_plot_data, Plot_Data *plot_data);
+
+void run_command_file(Data_Manager &data_manager, std::string file_name);
+void run_command_file_absolute_path(Data_Manager &data_manager, std::string file_name);
+void save_command_file(std::vector<std::string>& commands, std::string file_name);

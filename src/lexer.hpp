@@ -37,6 +37,7 @@ enum Token_enum : uint32_t {
     tkn_index,
     tkn_x,
     tkn_y,
+    tkn_script,
     tkn_show,
     tkn_hide,
     tkn_smooth,
@@ -44,6 +45,8 @@ enum Token_enum : uint32_t {
     tkn_extrema, // data new = extrema data 1 10
     tkn_delete,
     tkn_export,
+    tkn_run,
+    tkn_save,
 
     /* mutliple char operators */
     tkn_update_add,
@@ -81,7 +84,7 @@ public:
     
     void load_input_from_string(std::string source) { input = source; }
     void tokenize();
-    void print_token(Token& tkn, bool show_content = false) const;
+    void log_token(Token& tkn) const;
 
     template<typename... Args>
     void parsing_error(Token& tkn, const char* msg, Args... args)

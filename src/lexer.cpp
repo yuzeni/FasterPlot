@@ -34,6 +34,7 @@ static const char *token_name_table[tkn_SIZE - 256]{
     "index",
     "x",
     "y",
+    "script",
     "show",
     "hide",
     "smooth",
@@ -41,6 +42,8 @@ static const char *token_name_table[tkn_SIZE - 256]{
     "extrema",
     "delete",
     "export",
+    "run",
+    "save",
     
     "+=",
     "-=",
@@ -86,6 +89,7 @@ Token_enum keyword_compare(const std::string_view sv)
     case cte_hash_c_str("index"): return tkn_index;
     case cte_hash_c_str("x"): return tkn_x;
     case cte_hash_c_str("y"): return tkn_y;
+    case cte_hash_c_str("script"): return tkn_script;
     case cte_hash_c_str("show"): return tkn_show;
     case cte_hash_c_str("hide"): return tkn_hide;
     case cte_hash_c_str("smooth"): return tkn_smooth;
@@ -93,6 +97,8 @@ Token_enum keyword_compare(const std::string_view sv)
     case cte_hash_c_str("extrema"): return tkn_extrema;
     case cte_hash_c_str("delete"): return tkn_delete;
     case cte_hash_c_str("export"): return tkn_export;
+    case cte_hash_c_str("run"): return tkn_run;
+    case cte_hash_c_str("save"): return tkn_save;
     default: return tkn_ident;
     }
 }
@@ -394,21 +400,21 @@ void Lexer::post_tokenization() {
     }
 }
 
-void Lexer::print_token(Token &tkn, bool show_content) const
+void Lexer::log_token(Token &tkn) const
 {
-    std::cout << '\n';
-    if (tkn.type < 256) {
-	std::cout << "\033[92m" << (char)tkn.type << "\033[0m";
-    }
-    else if (show_content) {
-	switch (tkn.type) {
-	case tkn_ident:
-	case tkn_string: std::cout << "\033[91m" << tkn.sv << "\033[0m"; break;
-	case tkn_int: std::cout << "\033[94m" << tkn.i << "\033[0m"; break;
-	case tkn_real: std::cout << "\033[94m" << tkn.d << "\033[0m"; break;
-	default: std::cout << "\033[93m" << get_mul_char_token_name(tkn.type) << "\033[0m";
-	}
-    }
-    else std::cout << "\033[95m" << get_mul_char_token_name(tkn.type) << "\033[0m";
-    std::cout << " ";
+    std::string color;
+    if (tkn.type < 256 || (tkn.type >= tkn_update_add && tkn.type <= tkn_pow))
+	color = UTILS_BRIGHT_BLACK;
+    else if (tkn.type == tkn_data || tkn.type == tkn_function)
+	color = UTILS_GREEN;
+    else if (tkn.type >= tkn_int && tkn.type <= tkn_false)
+	color = UTILS_BLUE;
+    else if (tkn.type == tkn_iterator)
+	color = UTILS_MAGENTA;
+    else if (tkn.type >= tkn_fit && tkn.type <= tkn_save)
+	color = UTILS_BRIGHT_RED;
+    else
+	color = UTILS_WHITE;
+
+    logger.log_info("%s%s " UTILS_END_COLOR, color.c_str(), std::string(tkn.ptr, tkn.size).c_str());
 }

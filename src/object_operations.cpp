@@ -1,10 +1,15 @@
 #include "object_operations.hpp"
 
 #include <algorithm>
+#include <filesystem>
 
 #include "data_manager.hpp"
 #include "function_fitting.hpp"
 #include "utils.hpp"
+#include "command_parser.hpp"
+
+#define SCRIPT_FILE_TYPE ".script"
+#define SCRIPT_DIRECTORY "scripts/"
 
 bool interp_plot_data(Data_Manager &data_manager, Plot_Data *plot_data, int n_itr)
 {
@@ -94,4 +99,63 @@ bool get_extrema_plot_data(Plot_Data *object_plot_data, Plot_Data *plot_data)
 	going_up = val >= prev_val;
     }
     return true;
+}
+
+void run_command_file(Data_Manager& data_manager, std::string file_name)
+{
+    if (!(std::filesystem::exists(SCRIPT_DIRECTORY))) {
+        if (!(std::filesystem::create_directory(SCRIPT_DIRECTORY))) {
+	    logger.log_error("Failed to create directory '%s', please create it manually.", SCRIPT_DIRECTORY);
+	    return;
+	}
+    }
+
+    file_name = SCRIPT_DIRECTORY + file_name + SCRIPT_FILE_TYPE;
+
+    auto content = parse_file_cstr(file_name.c_str());
+    std::string file = content.first;
+    
+    handle_command_file(data_manager, file);
+}
+
+void run_command_file_absolute_path(Data_Manager &data_manager, std::string file_name)
+{
+    auto content = parse_file_cstr(file_name.c_str());
+    std::string file = content.first;
+    
+    handle_command_file(data_manager, file);
+}
+
+void save_command_file(std::vector<std::string> &commands, std::string file_name)
+{
+    if (!(std::filesystem::exists(SCRIPT_DIRECTORY))) {
+        if (!(std::filesystem::create_directory(SCRIPT_DIRECTORY))) {
+	    logger.log_error("Failed to create directory '%s', please create it manually.", SCRIPT_DIRECTORY);
+	    return;
+	}
+    }
+
+    file_name = SCRIPT_DIRECTORY + file_name;
+    std::string orig_file_name = file_name;
+    file_name += SCRIPT_FILE_TYPE;
+    
+    int file_idx = 1;
+    while (file_exists(file_name)) {
+	file_name = orig_file_name + "(" + std::to_string(file_idx) + ")" SCRIPT_FILE_TYPE;
+	++file_idx;
+    }
+    
+    std::ofstream out_file;
+    out_file.open(file_name);
+    if (out_file.is_open()) {
+
+	for (auto& cmd : commands) {
+	    out_file << cmd << '\n';
+	}
+
+	out_file.close();
+    }
+    else {
+	logger.log_error("Unable to open file '%s'", file_name.c_str());
+    }
 }

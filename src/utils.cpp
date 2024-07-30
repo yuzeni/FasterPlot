@@ -12,7 +12,7 @@ std::pair<char *, size_t> parse_file_cstr(const char *file_name)
     std::ifstream file(file_name, std::ios::binary);
     
     if(!file.is_open()) {
-	std::cout << "Failed to open file " << file_name << '\n';
+	logger.log_error("Failed to open file '%s'\n.", file_name);
 	return {nullptr, 0};
     }
     
@@ -24,7 +24,7 @@ std::pair<char *, size_t> parse_file_cstr(const char *file_name)
     file.read(data, file_size);
 
     if(!file) {
-	std::cout << "Error reading file: " << file_name << ". Only " << file.gcount() << " could be read\n";
+	logger.log_error("Error reading file '%s'. Only %d could be read.\n", file_name, file.gcount());
 	return {nullptr, 0};
     }
     
@@ -177,4 +177,13 @@ Vector2 draw_text_boxed(Font font, const char *text, Vector2 position, float fon
     DrawRectangleV({position.x - 3.f, position.y - 3.f}, {size.x + 3.f, size.y + 3.f}, {255, 255, 255, 255});
     DrawTextEx(font, text, position, fontSize, spacing, tint);
     return size;
+}
+
+std::string get_file_extension(std::string file_name)
+{
+    size_t i = file_name.size() - 1;
+    while (i >= 0 && file_name[i] != '.') {
+	--i;
+    }
+    return file_name.substr(i, file_name.size() - i);
 }
