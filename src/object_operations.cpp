@@ -74,7 +74,7 @@ void fit_sinusoid_plot_data(Plot_Data *plot_data, Function *function)
 
 bool get_extrema_plot_data(Plot_Data *object_plot_data, Plot_Data *plot_data)
 {
-    if (plot_data->y.empty() || !plot_data->x)
+    if (plot_data->y.empty())
 	return false;
     
     object_plot_data->y.clear();
@@ -89,7 +89,7 @@ bool get_extrema_plot_data(Plot_Data *object_plot_data, Plot_Data *plot_data)
 	prev_val = plot_data->y[ix - 1];
 	if ((going_up && val < prev_val) || (!going_up && val > prev_val)) {
 	    object_plot_data->y.push_back(plot_data->y[ix - 1]);
-	    object_plot_data->x->y.push_back(plot_data->x->y[ix - 1]);
+	    object_plot_data->x->y.push_back(plot_data->x ? plot_data->x->y[ix - 1] : ix - 1);
 	}
 	going_up = val >= prev_val;
     }

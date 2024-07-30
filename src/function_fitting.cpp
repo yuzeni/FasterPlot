@@ -3,10 +3,21 @@
 #include "data_manager.hpp"
 
 #include <cmath>
+#include <string>
 
 double Sinusoidal_Function::operator()(double x) const
 {
     return a + b * std::cos(omega * x) + c * std::sin(omega * x);
+}
+
+std::string Sinusoidal_Function::get_string_value() const
+{
+    return std::to_string(a) + " + " + std::to_string(b) + " * cos(" + std::to_string(omega) + " * x) + " + std::to_string(c) + " * sin(" + std::to_string(omega) + " * x)";
+}
+
+std::string Sinusoidal_Function::get_string_no_value() const
+{
+    return "a + b * cos(omega * x) + c * sin(omega * x)";
 }
 
 double Linear_Function::operator()(double x) const
@@ -14,7 +25,17 @@ double Linear_Function::operator()(double x) const
     return a * x + b;
 }
 
-static void get_SS_n(double* SS_n, int n, Plot_Data* data)
+std::string Linear_Function::get_string_value() const
+{
+    return std::to_string(a) + " * x + " + std::to_string(b);
+}
+
+std::string Linear_Function::get_string_no_value() const
+{
+    return "a * x + b";
+}
+
+static void get_SS_n__with_x(double* SS_n, int n, Plot_Data* data)
 {
     double SS_i = 0, S_i = 0, S_i_m1 = 0;
     SS_n[0] = SS_i;
@@ -25,6 +46,19 @@ static void get_SS_n(double* SS_n, int n, Plot_Data* data)
 	SS_n[i] = SS_i;
     }
 }
+
+static void get_SS_n__without_x(double* SS_n, int n, Plot_Data* data)
+{
+    double SS_i = 0, S_i = 0, S_i_m1 = 0;
+    SS_n[0] = SS_i;
+    for(int i = 1; i < n; ++i) {
+	S_i = S_i_m1 + 0.5 * (data->y[i] + data->y[i - 1]) * (double(i) - double(i-1));
+	SS_i = SS_i + 0.5 * (S_i + S_i_m1) * (double(i) - double(i-1));
+	S_i_m1 = S_i;
+	SS_n[i] = SS_i;
+    }
+}
+
 
 struct Vector_4
 {
@@ -190,13 +224,16 @@ struct Matrix_3x3
 
 void Sinusoidal_Function::fit_to_data(Plot_Data* data)
 {
-    if(!data->x)
-	return;
+    // if(!data->x)
+    // 	return;
     
-    int n = std::min(data->y.size(), data->x->y.size());
+    int n = data->size();
     
     double* SS_n = new double[n];
-    get_SS_n(SS_n, n, data);
+    if (data->x)
+	get_SS_n__with_x(SS_n, n, data);
+    else
+	get_SS_n__without_x(SS_n, n, data);
 
     double ssn_sqr = 0;
     double ssn_xn_sqr = 0;
@@ -213,7 +250,7 @@ void Sinusoidal_Function::fit_to_data(Plot_Data* data)
     
     for(int i = 0; i < n; ++i)
     {
-	double xk  = data->x->y[i];
+	double xk  = data->x ? data->x->y[i] : double(i);
 	double yk  = data->y[i];
 	double SSk = SS_n[i];
 	
@@ -263,7 +300,7 @@ void Sinusoidal_Function::fit_to_data(Plot_Data* data)
 
     for(int i = 0; i < n; ++i)
     {
-	double xk  = data->x->y[i];
+	double xk  = data->x ? data->x->y[i] : double(i);
 	double yk  = data->y[i];
 	double sin_omega_xk = std::sin(omega * xk);
 	double cos_omega_xk = std::cos(omega * xk);

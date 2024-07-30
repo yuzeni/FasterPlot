@@ -86,6 +86,24 @@ struct Function
 	return 0;
     }
 
+    std::string get_string_value() const
+    {
+	switch(type) {
+	case FT_linear:   return func.linear.get_string_value();
+	case FT_sinusoid: return func.sinusoid.get_string_value();
+	}
+	return "undefined function";
+    }
+    
+    std::string get_string_no_value() const
+    {
+	switch(type) {
+	case FT_linear:   return func.linear.get_string_no_value();
+	case FT_sinusoid: return func.sinusoid.get_string_no_value();
+	}
+	return "undefined function";
+    }
+
     bool is_defined() const
     {
 	switch(type) {
@@ -157,6 +175,7 @@ struct Data_Manager
     void zero_coord_sys_origin();
     void update_references();
     void export_plot_data(std::string file_name, std::vector<Plot_Data*>& plot_data);
+    void export_functions(std::string file_name, std::vector<Function*>& functions);
     
 private:
 

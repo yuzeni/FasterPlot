@@ -710,6 +710,15 @@ void handle_command(Data_Manager &data_manager, Lexer& lexer)
 	case OT_plot_data_itr:
 	    data_manager.export_plot_data(file_name, *arg_unary.obj.plot_data_itr);
 	    break;
+	case OT_function:
+	{
+	    std::vector<Function*> functions {arg_unary.obj.function};
+	    data_manager.export_functions(file_name, functions);
+	}
+	break;
+	case OT_function_itr:
+	    data_manager.export_functions(file_name, *arg_unary.obj.function_itr);
+	    break;
 	}
 	
 	goto exit;

@@ -1,5 +1,6 @@
 #include "data_manager.hpp"
 
+#include <cstddef>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -50,8 +51,17 @@ void Plot_Data::update_content_tree_element(size_t index)
 void Function::update_content_tree_element(size_t index)
 {
     content_element.name = "function " + std::to_string(index) + (!info.header.empty() ? " '" + info.header + "'" : "");
+
+    content_element.name += " (x) = " + get_string_no_value();
+	
     content_element.name_color = info.color;
     content_element.content.clear();
+    
+    if (!is_defined())
+	content_element.content.push_back({"f(x) = " + get_string_no_value()});
+    else
+	content_element.content.push_back({"f(x) = " + get_string_value()});
+    
     if (info.visible)
 	content_element.content.push_back({"visible"});
     else
@@ -425,9 +435,8 @@ void Data_Manager::update_element_indices()
     }
 }
 
-void Data_Manager::export_plot_data(std::string file_name, std::vector<Plot_Data*>& plot_data)
+static void get_valid_file_name_and_ensure_directory(std::string& file_name)
 {
-
     if(!(std::filesystem::exists(EXPORT_DIRECTORY))){
         if (!(std::filesystem::create_directory(EXPORT_DIRECTORY))) {
 	    logger.log_error("Failed to create directory '%s', please create it manually.", EXPORT_DIRECTORY);
@@ -443,6 +452,11 @@ void Data_Manager::export_plot_data(std::string file_name, std::vector<Plot_Data
 	file_name = orig_file_name + "_(" + std::to_string(file_idx) + ")" EXPORT_FILE_TYPE;
 	++file_idx;
     }
+}
+
+void Data_Manager::export_plot_data(std::string file_name, std::vector<Plot_Data*>& plot_data)
+{
+    get_valid_file_name_and_ensure_directory(file_name);
     
     std::ofstream out_file;
     out_file.open(file_name);
@@ -463,6 +477,25 @@ void Data_Manager::export_plot_data(std::string file_name, std::vector<Plot_Data
 	    if (plot_data[pd_i]->size() > i) {
 		out_file << std::to_string(plot_data[pd_i]->y[i]) << '\n';
 	    }
+	}
+	out_file.close();
+    }
+    else {
+	logger.log_error("Unable to open file '%s'", file_name.c_str());
+    }
+}
+
+void Data_Manager::export_functions(std::string file_name, std::vector<Function*>& functions)
+{
+    get_valid_file_name_and_ensure_directory(file_name);
+    
+    std::ofstream out_file;
+    out_file.open(file_name);
+    if (out_file.is_open()) {
+
+	for (size_t fi = 0; fi < functions.size(); ++fi) {
+	    out_file << functions[fi]->content_element.name << "\n";
+	    out_file << functions[fi]->get_string_value() << "\n\n";
 	}
 	out_file.close();
     }
