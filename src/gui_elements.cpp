@@ -2,6 +2,7 @@
 
 #include "global_vars.hpp"
 #include "command_parser.hpp"
+#include "lexer.hpp"
 #include "raylib.h"
 #include "utils.hpp"
 
@@ -99,14 +100,16 @@ void Content_Tree::delete_element(Content_Tree_Element *elem)
 
 void Text_Input::tokenize_input()
 {
-    lexer = Lexer{};
-    lexer.load_input_from_string(input);
+    // lexer = Lexer{};
+    // lexer.load_input_from_string(input);
     lexer.tokenize();
 }
 
 void Text_Input::update(Data_Manager& data_manager)
 {
     int key = GetCharPressed();
+
+    std::string& input = lexer.get_input();
     
     if ((key >= 97) && (key <= 122))
 	input_active = true;
@@ -119,44 +122,43 @@ void Text_Input::update(Data_Manager& data_manager)
 	input.clear();
     }
 
-    static size_t prev_input_size = 0;
-
     g_keyboard_lock = false;
     if (input_active) {
 	g_keyboard_lock = true;
+
+	bool new_chars = false;
 	
 	while (key > 0) {
 	    if ((key >= 32) && (key <= 127)) {
 		input += (char)key;
 	    }
 	    key = GetCharPressed();  // get next character in the queue
+	    new_chars = true;
 	}
 
-	if (input.size() != prev_input_size) {
+	if (new_chars) {
 	    tokenize_input();
-	    prev_input_size = input.size();
+	    new_chars = false;
 	}
 	
 	if (IsKeyPressed(KEY_BACKSPACE)) {
 	    if (!input.empty()) {
-		if (IsKeyDown(KEY_LEFT_CONTROL)) {
-		    input.erase(input.begin() + (lexer.get_tokens().back().ptr - lexer.get_input().c_str()), input.end());
-		    tokenize_input();
-		    prev_input_size = input.size();
+		if (IsKeyDown(KEY_LEFT_CONTROL) && lexer.get_tokens().size() >= 2) {
+		    input.erase(input.begin() + (lexer.get_tokens()[lexer.get_tokens().size() - 2].ptr - lexer.get_input().c_str()), input.end());
 		}
 		else {
 		    input.pop_back();
 		}
+		tokenize_input();
 	    }
 	    else {
 		input_active = false;
 	    }
 	}
     }
-    else if (!lexer.get_input().empty()) {
+    else if (!input.empty()) {
 	handle_command(data_manager, lexer);
 	lexer = Lexer{};
-	input.clear();
     }
 }
 
@@ -172,32 +174,36 @@ void Text_Input::draw()
 	    previous_result = result;
 	    show_cursor = !show_cursor;
 	}
+
+	std::string& input = lexer.get_input();
 	
 	Vector2 size = {0, 0};
-	if (!lexer.get_input().empty())
-	   size = MeasureTextEx(*TEXT_INPUT_FONT, lexer.get_input().c_str(), TEXT_INPUT_FONT_SIZE, 0);
+	if (!input.empty())
+	   size = MeasureTextEx(*TEXT_INPUT_FONT, input.c_str(), TEXT_INPUT_FONT_SIZE, 0);
 	if (show_cursor)
 	    size.x += MeasureTextEx(*TEXT_INPUT_FONT, "|", TEXT_INPUT_FONT_SIZE, 0).x;
 	DrawRectangleV({draw_pos.x - 3.f, draw_pos.y - 3.f}, {std::max(size.x, TEXT_INPUT_MIN_BOX_SIZE) + 8.f, TEXT_INPUT_FONT_SIZE + 3.f}, {230, 230, 230, 255});
 	
-	if (!lexer.get_input().empty()) {
+	if (!input.empty()) {
 	    Color color;
 	    int tkn_idx = 0;
 	    const std::vector<Token>& tokens = lexer.get_tokens();
-	    for(size_t i = 0; i < lexer.get_input().size(); ++i) {
-		str[0] = lexer.get_input()[i];
+	    for(size_t i = 0; i < input.size(); ++i) {
+		str[0] = input[i];
 
 		if (!tokens.empty()) {
-		    while (lexer.get_input().c_str() + i >= tokens[tkn_idx].ptr + tokens[tkn_idx].size)
+		    while (input.c_str() + i >= tokens[tkn_idx].ptr + tokens[tkn_idx].size)
 			++tkn_idx;
 	    
-		    if ((lexer.get_input().c_str() + i >= tokens[tkn_idx].ptr) && (lexer.get_input().c_str() + i < tokens[tkn_idx].ptr + tokens[tkn_idx].size)) {
+		    if ((input.c_str() + i >= tokens[tkn_idx].ptr) && (input.c_str() + i < tokens[tkn_idx].ptr + tokens[tkn_idx].size)) {
 			if (tokens[tkn_idx].type < 256 || (tokens[tkn_idx].type >= tkn_update_add && tokens[tkn_idx].type <= tkn_pow))
 			    color = DARKGRAY;
 			else if (tokens[tkn_idx].type == tkn_data || tokens[tkn_idx].type == tkn_function)
 			    color = DARKGREEN;
 			else if (tokens[tkn_idx].type >= tkn_int && tokens[tkn_idx].type <= tkn_false)
 			    color = BLUE;
+			else if (tokens[tkn_idx].type == tkn_iterator)
+			    color = BROWN;
 			else if (tokens[tkn_idx].type >= tkn_fit && tokens[tkn_idx].type <= tkn_delete)
 			    color = MAROON;
 			else

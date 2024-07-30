@@ -8,8 +8,12 @@
 
 bool interp_plot_data(Data_Manager &data_manager, Plot_Data *plot_data, int n_itr)
 {
-    if (plot_data->y.empty() || !plot_data->x)
+    if (plot_data->y.empty())
 	return false;
+
+    if (!plot_data->x) {
+	plot_data->x = data_manager.new_plot_data(get_new_default_x_for_plot_data(plot_data));
+    }
 
     std::vector<double> new_y(plot_data->y.size() * 2);
     std::vector<double> new_x(plot_data->x->y.size() * 2);
@@ -38,9 +42,7 @@ bool interp_plot_data(Data_Manager &data_manager, Plot_Data *plot_data, int n_it
     new_x[new_x.size() - 1] = plot_data->x->y[plot_data->x->y.size() - 1];
     new_y[new_y.size() - 1] = plot_data->y[plot_data->y.size() - 1];
 
-    data_manager.plot_data.push_back(new Plot_Data);
-    data_manager.plot_data.back()->y = new_x;
-    plot_data->x = data_manager.plot_data.back();
+    plot_data->x->y = new_x;
     plot_data->y = new_y;
 
     if (n_itr >= 2)
@@ -50,7 +52,7 @@ bool interp_plot_data(Data_Manager &data_manager, Plot_Data *plot_data, int n_it
 
 bool smooth_plot_data(Plot_Data *plot_data, int window_size)
 {
-    if (plot_data->y.empty() || !plot_data->x)
+    if (plot_data->y.empty())
 	return false;
 
     for(size_t ix = 0; ix < plot_data->size(); ++ix)
@@ -74,7 +76,7 @@ bool get_extrema_plot_data(Plot_Data *object_plot_data, Plot_Data *plot_data)
 {
     if (plot_data->y.empty() || !plot_data->x)
 	return false;
-
+    
     object_plot_data->y.clear();
 
     double prev_val = plot_data->y[0];
@@ -86,8 +88,8 @@ bool get_extrema_plot_data(Plot_Data *object_plot_data, Plot_Data *plot_data)
 	val = plot_data->y[ix];
 	prev_val = plot_data->y[ix - 1];
 	if ((going_up && val < prev_val) || (!going_up && val > prev_val)) {
-	    object_plot_data->y.push_back(plot_data->y[ix]);
-	    object_plot_data->x->y.push_back(plot_data->x->y[ix]);
+	    object_plot_data->y.push_back(plot_data->y[ix - 1]);
+	    object_plot_data->x->y.push_back(plot_data->x->y[ix - 1]);
 	}
 	going_up = val >= prev_val;
     }

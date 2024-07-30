@@ -9,6 +9,9 @@ enum Object_Type
     OT_function,
     OT_value,
     OT_plot_data_ptr,
+    OT_plot_data_itr,
+    OT_function_itr,
+    OT_plot_data_ptr_itr,
     OT_SIZE, 
 };
 
@@ -18,6 +21,9 @@ inline const char *object_type_name_table[OT_SIZE] {
     "function",
     "value",
     "plot_data_ptr",
+    "plot_data_itr",
+    "function_itr",
+    "plot_data_ptr_itr",
 };
 
 struct Plot_Data;
@@ -30,12 +36,24 @@ struct Command_Object
 	Plot_Data* plot_data;
 	Plot_Data** plot_data_ptr;
 	Function* function;
+	std::vector<Plot_Data*>* plot_data_itr;
+	std::vector<Plot_Data**>* plot_data_ptr_itr;
+	std::vector<Function*>* function_itr;
     } obj;
+
+    void delete_iterator() {
+	switch(type) {
+	case OT_plot_data_itr: delete obj.plot_data_itr; break;
+	case OT_plot_data_ptr_itr: delete obj.plot_data_ptr_itr; break;
+	case OT_function_itr: delete obj.function_itr; break;
+	}
+    }
 
     bool is_undefined() { return type == OT_undefined; }
 };
 
-enum Operator_Type {
+enum Operator_Type
+{
     OP_undefined,
     OP_add,
     OP_sub,

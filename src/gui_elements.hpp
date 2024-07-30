@@ -66,7 +66,6 @@ private:
     void tokenize_input();
     
     bool input_active = false;
-    std::string input;
     Lexer lexer;
     bool show_cursor = true;
 };

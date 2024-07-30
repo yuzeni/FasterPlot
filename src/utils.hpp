@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <fstream>
 
 namespace utils {
     constexpr uint64_t default_str_hash_value = 5381;
@@ -39,6 +40,7 @@ struct Logger {
 	    log_error("Last error message did not fit in the buffer of size %d.", LOG_OUTPUT_ERROR_MSG_SIZE);
 	}
 	else {
+	    printf("ERROR: %s\n", buffer);
 	    log_msgs.push_back({"ERROR: ", RED});
 	    log_msgs.push_back({buffer, BLACK});
 	}
@@ -122,3 +124,10 @@ bool check_flag(T var, T flag)
 }
 
 Vector2 draw_text_boxed(Font font, const char *text, Vector2 position, float fontSize, float spacing, Color tint);
+
+
+inline bool file_exists(const std::string& file_name)
+{
+    std::ifstream file(file_name);
+    return file.good();
+}

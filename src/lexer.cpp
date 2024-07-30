@@ -5,6 +5,7 @@
 #include <cstring>
 #include <iostream>
 #include <string>
+#include <vector>
 #include <optional>
 #include <string_view>
 
@@ -21,6 +22,7 @@ static const char *token_name_table[tkn_SIZE - 256]{
     "string",
     "true",
     "false",
+    "iterator",
 
     "fit",
     "sinusoid",
@@ -158,10 +160,24 @@ Token::Token(Token_enum type, char *ptr, char* ptr_end, void *data)
     if (data) {
 	switch (type) {
 	case tkn_ident:
-	case tkn_string: d_a = true; sv = *reinterpret_cast<std::string_view*>(data); break;
-	case tkn_int:    d_a = true; i = *reinterpret_cast<int64_t*>(data); break;
-	case tkn_real:   d_a = true; d = *reinterpret_cast<double*>(data);  break;
-	default: logger.log_error("The token '%s' does not support data.", get_token_name_str(type).c_str());
+	case tkn_string:
+	    d_a = true;
+	    sv = *reinterpret_cast<std::string_view*>(data);
+	    break;
+	case tkn_int:
+	    d_a = true;
+	    i = *reinterpret_cast<int64_t*>(data);
+	    break;
+	case tkn_real:
+	    d_a = true;
+	    d = *reinterpret_cast<double*>(data);
+	    break;
+	case tkn_iterator:
+	    d_a = true;
+	    itr = *reinterpret_cast<std::vector<int64_t>**>(data);
+	    break;
+	default:
+	    logger.log_error("The token '%s' does not support data.", get_token_name_str(type).c_str());
 	}
     }
     
@@ -169,24 +185,20 @@ Token::Token(Token_enum type, char *ptr, char* ptr_end, void *data)
 	logger.log_error("The data ptr for the token was empty");
 }
 
-void Lexer::load_input_from_string(std::string source)
-{
-    input = source;
-    after_load_init();
-}
 
-void Lexer::after_load_init()
+
+void Lexer::tokenize()
 {
     p = (char*)input.c_str();
     p_begin = p;
     eof = p + input.size();
-}
 
-void Lexer::tokenize()
-{
+    tkns.clear();
+    
     while(tkns.empty() || (tkns.back().type != tkn_eof && tkns.back().type != tkn_parse_error)) {
 	get_next_token();
     }
+    post_tokenization();
 }
 
 static bool float_point_check(char *p, char *eof)
@@ -301,6 +313,80 @@ bool Lexer::get_next_token()
     parsing_error(tkns.back(), "Failed to parse the character after this token.");
     ++p;
     return get_next_token();
+}
+
+void Lexer::post_tokenization() {
+
+
+    for (size_t tkn_idx = 0; tkn_idx < tkns.size(); ++tkn_idx)
+    {
+	// find iterators
+	
+	std::vector<int64_t>* iterator = new std::vector<int64_t>;
+	size_t tkn_idx_iterator_begin;
+	size_t tkn_idx_iterator_end;
+	
+	while (tkn_idx < tkns.size())
+	{
+	    if (tkn_idx + 2 < tkns.size() && tkns[tkn_idx].type == tkn_int && tkns[tkn_idx + 1].type == tkn_range && tkns[tkn_idx + 2].type == tkn_int) {
+	    
+		if (iterator->empty())
+		    tkn_idx_iterator_begin = tkn_idx;
+		tkn_idx_iterator_end = tkn_idx + 3;
+
+		if (tkns[tkn_idx].i <= tkns[tkn_idx + 2].i) {
+		    for (int64_t it = tkns[tkn_idx].i; it <= tkns[tkn_idx + 2].i; ++it) {
+			iterator->push_back(it);
+		    }
+		}
+		else {
+		    for (int64_t it = tkns[tkn_idx].i; it >= tkns[tkn_idx + 2].i; --it) {
+			iterator->push_back(it);
+		    }
+		}
+		tkn_idx += 3;
+	    
+		if (tkn_idx < tkns.size() && tkns[tkn_idx].type == ',') {
+		    continue;
+		}
+		else {
+		    break;
+		}
+	    }
+	    else if (tkns[tkn_idx].type == tkn_int) {
+	    
+		if (iterator->empty())
+		    tkn_idx_iterator_begin = tkn_idx;
+		tkn_idx_iterator_end = tkn_idx + 1;
+	    
+		iterator->push_back(tkns[tkn_idx].i);
+
+		++tkn_idx;
+		if (tkn_idx < tkns.size() && tkns[tkn_idx].type == ',') {
+		    continue;
+		}
+		else {
+		    break;
+		}
+	    }
+	    ++tkn_idx;
+	}
+
+	// discard single integer arguments
+	if (iterator->size() <= 1) {
+	    iterator->clear();
+	}
+
+	if (iterator->empty()) {
+	    continue;
+	}
+
+	char* iterator_ptr = tkns[tkn_idx_iterator_begin].ptr;
+	char* iterator_ptr_end = tkns[tkn_idx_iterator_end].ptr;
+    	tkns.erase(tkns.begin() + tkn_idx_iterator_begin, tkns.begin() + tkn_idx_iterator_end);
+	tkns.insert(tkns.begin() + tkn_idx_iterator_begin, Token{tkn_iterator, iterator_ptr, iterator_ptr_end, &iterator});
+	tkn_idx = tkn_idx_iterator_begin;
+    }
 }
 
 void Lexer::print_token(Token &tkn, bool show_content) const

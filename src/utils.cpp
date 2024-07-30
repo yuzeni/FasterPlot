@@ -92,6 +92,12 @@ std::vector<Plot_Data*> parse_numeric_csv_file(std::string file_name)
 	    ++p;
 	}
 
+	if (p < p_end && *p == '#') {
+	    while (p < p_end && *p != '\n') {
+		++p;
+	    }
+	}
+
 	// change coma to dots, if inside a string (fixing , notation in numbers)
 	fix_comma_notation(inside_string, p);
 	if (p < p_end && (is_digit(*p) || (((p[0] == '.') || (p[0] == '+') || (p[0] == '-')) && is_digit(*(p + 1))))) {

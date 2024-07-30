@@ -1,6 +1,10 @@
 #include "data_manager.hpp"
 
+#include <string>
+#include <fstream>
+
 #include "global_vars.hpp"
+#include "utils.hpp"
 
 // coordinate system
 constexpr int COORDINATE_SYSTEM_GRID_SPACING = 60;
@@ -18,6 +22,12 @@ constexpr Font* PLOT_DATA_FONT = &g_app_font_18;
 void Plot_Data::update_content_tree_element(size_t index)
 {
     content_element.name = "data " + std::to_string(index) + (!info.header.empty() ? " '" + info.header + "'" : "");
+    if (!x_referencees.empty()) {
+	content_element.name += " | X of data " + std::to_string(x_referencees[0]->index);
+	for (size_t i = 1; i < x_referencees.size(); ++i) {
+	    content_element.name += ", " + std::to_string(x_referencees[i]->index);
+	}
+    }
     content_element.name_color = info.color;
     content_element.content.clear();
     if (info.visible)
@@ -77,12 +87,12 @@ void Data_Manager::draw_plot_data()
 {
     for(const auto& pd : plot_data)
     {
-	if (!pd->x || !pd->info.visible)
+	if (!pd->info.visible)
 	    continue;
 	
 	for(size_t ix = 0; ix < pd->size(); ++ix)
 	{
-	    Vec2<double> screen_space_point = camera.coord_sys.transform_to(Vec2<double>{pd->x->y[ix], pd->y[ix]} + camera.origin_offset, app_coordinate_system);
+	    Vec2<double> screen_space_point = camera.coord_sys.transform_to(Vec2<double>{pd->x ? pd->x->y[ix] : double(ix), pd->y[ix]} + camera.origin_offset, app_coordinate_system);
 	    Vec2<double> prev_screen_space_point;
 	    if(pd->info.plot_type & PT_DISCRETE) {
 		DrawCircle(std::round(screen_space_point.x), std::round(screen_space_point.y), pd->info.thickness / 2.f, pd->info.color);
@@ -130,7 +140,7 @@ Data_Manager::Data_Manager()
     camera.coord_sys.origin = {double(plot_padding.x), double(GetScreenHeight() - plot_padding.y)};
     camera.coord_sys.basis_x = {1, 0};
     camera.coord_sys.basis_y = {0, -1};
-    default_x.content_element.name = "default";
+    // default_x.content_element.name = "default";
 }
 
 Data_Manager::~Data_Manager()
@@ -141,58 +151,60 @@ Data_Manager::~Data_Manager()
 	delete f;
 }
 
-void Data_Manager::new_plot_data(Plot_Data *data)
+Plot_Data* Data_Manager::new_plot_data(Plot_Data *data)
 {
     if (data)
 	plot_data.push_back(data);
     else
 	plot_data.push_back(new Plot_Data);
     
-    plot_data.back()->x = &default_x;
     plot_data.back()->info.color = graph_color_array[graph_color_array_idx];
+    plot_data.back()->index = plot_data.size() - 1;
     ++graph_color_array_idx;
     if (graph_color_array_idx >= graph_color_array_cnt)
 	graph_color_array_idx = 0;
     
     content_tree.add_element(&plot_data.back()->content_element);
+
+    return plot_data.back();
 }
 
 void Data_Manager::delete_plot_data(Plot_Data *data)
 {
-    // also checks for references to the deleted object and resolves them
-    for (size_t i = 0; i < plot_data.size(); ++i) {
-	if (plot_data[i] == data) {
-	    plot_data.erase(plot_data.begin() + i);
-	    content_tree.delete_element(&data->content_element);
-	    delete data;
-	}
-	
-	if (plot_data[i]->x == data)
-	    plot_data[i]->x = &default_x;
+    // resolve reference
+    for (size_t i = 0; i < data->x_referencees.size(); ++i) {
+	data->x_referencees[i]->x = nullptr; //&default_x;
     }
+    
+    plot_data.erase(plot_data.begin() + data->index);
+    content_tree.delete_element(&data->content_element);
+    delete data;
+
+    update_element_indices();
 }
 
-void Data_Manager::new_function()
+Function* Data_Manager::new_function()
 {
     functions.push_back(new Function);
     
     functions.back()->info.color = graph_color_array[graph_color_array_idx];
+    functions.back()->index = functions.size() - 1;
     ++graph_color_array_idx;
     if (graph_color_array_idx >= graph_color_array_cnt)
 	graph_color_array_idx = 0;
     
     content_tree.add_element(&functions.back()->content_element);
+    
+    return functions.back();
 }
 
 void Data_Manager::delete_function(Function *func)
 {
-    for (size_t i = 0; i < functions.size(); ++i) {
-	if (functions[i] == func) {
-	    functions.erase(functions.begin() + i);
-	    content_tree.delete_element(&func->content_element);
-	    delete func;
-	}
-    }
+    functions.erase(functions.begin() + func->index);
+    content_tree.delete_element(&func->content_element);
+    delete func;
+
+    update_element_indices();
 }
     
 void Data_Manager::add_plot_data(std::string file)
@@ -209,17 +221,17 @@ void Data_Manager::draw()
     camera.coord_sys.origin.y += GetScreenHeight() - old_g_screen_height;
     old_g_screen_height = GetScreenHeight();
 
-    // update default x
-    size_t max_x = 0;
-    for (const auto pd : plot_data) {
-	max_x = pd->y.size() > max_x ? pd->y.size() : max_x;
-    }
+    // // update default x
+    // size_t max_x = 0;
+    // for (const auto pd : plot_data) {
+    // 	max_x = pd->y.size() > max_x ? pd->y.size() : max_x;
+    // }
 
-    if (default_x.y.size() != max_x) {
-	default_x.y.resize(max_x);
-	for (size_t i = 0; i < default_x.y.size(); ++i)
-	    default_x.y[i] = i;
-    }
+    // if (default_x.y.size() != max_x) {
+    // 	default_x.y.resize(max_x);
+    // 	for (size_t i = 0; i < default_x.y.size(); ++i)
+    // 	    default_x.y[i] = i;
+    // }
 
     if (camera.is_undefined())
 	fit_camera_to_plot();
@@ -278,12 +290,20 @@ void Data_Manager::fit_camera_to_plot()
     double max_x = -HUGE_VAL, max_y = -HUGE_VAL, min_x = HUGE_VAL, min_y = HUGE_VAL;
 	
     for(const auto& pd : plot_data) {
-	if (!pd->x || !pd->info.visible)
+	if (!pd->info.visible)
 	    continue;
-	
-	for(double val : pd->x->y) {
-	    max_x = val > max_x ? val : max_x;
-	    min_x = val < min_x ? val : min_x;
+
+	if (pd->x) {
+	    for(double val : pd->x->y) {
+		max_x = val > max_x ? val : max_x;
+		min_x = val < min_x ? val : min_x;
+	    }
+	}
+	else {
+	    for(size_t i = 0; i < pd->size(); ++i) {
+		max_x = i > max_x ? i : max_x;
+		min_x = i < min_x ? i : min_x;
+	    }	    
 	}
 	
 	for(double val : pd->y) {
@@ -327,10 +347,18 @@ void Data_Manager::fit_camera_to_plot()
 void Data_Manager::fit_camera_to_plot(Plot_Data *plot_data)
 {
     double max_x = -HUGE_VAL, max_y = -HUGE_VAL, min_x = HUGE_VAL, min_y = HUGE_VAL;
-	
-    for(double val : plot_data->x->y) {
-	max_x = val > max_x ? val : max_x;
-	min_x = val < min_x ? val : min_x;
+
+    if (plot_data->x) {
+	for(double val : plot_data->x->y) {
+	    max_x = val > max_x ? val : max_x;
+	    min_x = val < min_x ? val : min_x;
+	}
+    }
+    else {
+	for(size_t i = 0; i < plot_data->size(); ++i) {
+	    max_x = i > max_x ? i : max_x;
+	    min_x = i < min_x ? i : min_x;
+	}	    
     }
     
     for(double val : plot_data->y) {
@@ -359,3 +387,79 @@ void Data_Manager::fit_camera_to_plot(Function* func)
     camera.origin_offset.y = -min_y;
 }
 
+// quadratic, only use when actually necessary
+void Data_Manager::update_references()
+{
+    for (size_t i = 0; i < plot_data.size(); ++i)
+    {
+	// x-axis references
+	if (plot_data[i]->x) {
+	    bool already_referenced = false;
+	    for (auto ref : plot_data[i]->x->x_referencees) {
+		if (ref == plot_data[i]) {
+		    already_referenced = true;
+		}
+	    }
+	    if (!already_referenced) {
+		plot_data[i]->x->x_referencees.push_back(plot_data[i]);
+	    }
+	}
+    }
+}
+
+// quadratic, only use when actually necessary
+void Data_Manager::update_element_indices()
+{
+    for (size_t i = 0; i < plot_data.size(); ++i) {
+	plot_data[i]->index = i;
+    }
+    
+    for (size_t i = 0; i < functions.size(); ++i) {
+        functions[i]->index = i;
+    }
+}
+
+void export_plot_data(std::string file_name, std::vector<Plot_Data*>& plot_data)
+{
+    std::string orig_file_name = "ouput/" + file_name;
+    int file_idx = 1;
+    while (file_exists(file_name)) {
+	file_name = orig_file_name + '(' + std::to_string(file_idx) + ')';
+    }
+    
+    std::ofstream out_file;
+    out_file.open(file_name);
+    if (out_file.is_open()) {
+
+	size_t max_size = 0;
+	for (auto pd : plot_data) {
+	    max_size = pd->size() > max_size ? pd->size() : max_size;
+	}
+	
+	for (size_t i = 0; i < max_size; ++i) {
+	    size_t pd_i = 0;
+	    for (pd_i; pd_i < plot_data.size() - 1; ++pd_i) {
+		if (plot_data[pd_i]->size() > i) {
+		    out_file << std::to_string(plot_data[pd_i]->y[i]) << ", ";
+		}
+	    }
+	    ++pd_i;
+	    if (plot_data[pd_i]->size() > i) {
+		out_file << std::to_string(plot_data[pd_i]->y[i]);
+	    }
+	}
+    }
+    else {
+	logger.log_error("Unable to open file '%s'", file_name);
+    }
+}
+
+Plot_Data *get_new_default_x_for_plot_data(Plot_Data *plot_data)
+{
+    Plot_Data* new_x = new Plot_Data;
+    new_x->y.resize(plot_data->y.size());
+    for (size_t i = 0; i < new_x->size(); ++i) {
+	new_x->y[i] = i;
+    }
+    return new_x;
+}

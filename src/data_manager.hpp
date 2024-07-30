@@ -45,17 +45,17 @@ struct Plot_Info
     Plot_Type plot_type = Plot_Type(PT_INTERP_LINEAR);
     float thickness = 4;
     bool visible = true;
-    
 };
 
 struct Plot_Data
 {
     Plot_Info info;
     std::vector<double> y;
-    Plot_Data* x = nullptr;
     Content_Tree_Element content_element;
+    std::vector<Plot_Data*> x_referencees;
+    size_t index = 0;
     
-    size_t size()
+    size_t size() const
     {
 	if(x)
 	    return std::min(y.size(), x->y.size());
@@ -63,6 +63,7 @@ struct Plot_Data
     };
 
     void update_content_tree_element(size_t index);
+    Plot_Data* x = nullptr;
 };
 
 struct Function
@@ -71,6 +72,7 @@ struct Function
     Function_Type type = FT_undefined;
     Content_Tree_Element content_element;
     Plot_Data* fit_from_data = nullptr;
+    size_t index = 0;
     
     double operator()(double x) const
     {
@@ -143,24 +145,29 @@ struct Data_Manager
     VP_Camera camera;
     const Vec2<int> plot_padding = {50, 50};
 
-    void new_plot_data(Plot_Data* data = nullptr);
+    Plot_Data* new_plot_data(Plot_Data* data = nullptr);
     void delete_plot_data(Plot_Data *data);
-    void new_function();
+    Function* new_function();
     void delete_function(Function *function);
     void fit_camera_to_plot(Plot_Data* plot_data);
     void fit_camera_to_plot(Function* func);
     void zero_coord_sys_origin();
+    void update_references();
+    void export_plot_data(std::string file_name, std::vector<Plot_Data*>* plot_data);
     
 private:
 
-    Plot_Data default_x;
+    // Plot_Data default_x;
     int graph_color_array_idx = 0;
     Content_Tree content_tree;
 
     void fit_camera_to_plot();
     void draw_plot_data();
     void draw_functions();
+    void update_element_indices();
 };
+
+Plot_Data* get_new_default_x_for_plot_data(Plot_Data* plot_data);
 
 inline const char *help_messages[] {
     "Drag and drop a 'comma seperated value' file. To import data.",

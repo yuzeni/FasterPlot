@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 #include <algorithm>
 #include <string_view>
 
@@ -23,6 +24,7 @@ enum Token_enum : uint32_t {
     tkn_string,
     tkn_true, // add
     tkn_false, // add
+    tkn_iterator,
 
     /* keywords */
     tkn_fit,
@@ -41,6 +43,7 @@ enum Token_enum : uint32_t {
     tkn_interp,
     tkn_extrema, // data new = extrema data 1 10
     tkn_delete,
+    // tkn_export,
 
     /* mutliple char operators */
     tkn_update_add,
@@ -66,15 +69,17 @@ struct Token {
     Token_enum type = tkn_none;
     union {
 	std::string_view sv;
-	int64_t  i = 0;
-	double   d;
+	int64_t i = 0;
+	double d;
+	std::vector<int64_t>* itr; // highly prone to leaking !!
     };
+    void delete_itr() { if(type == tkn_iterator) delete itr; }
 };
 
 class Lexer {
 public:
     
-    void load_input_from_string(std::string source);
+    void load_input_from_string(std::string source) { input = source; }
     void tokenize();
     void print_token(Token& tkn, bool show_content = false) const;
 
@@ -103,7 +108,7 @@ public:
     int parsing_error_cnt = 0;
     int error_cnt = 0;
 
-    const std::string& get_input() const { return input; }
+    std::string& get_input() { return input; }
     std::vector<Token>& get_tokens() { return tkns; }
 
     Token& tkn(size_t offset = 0) { return tkns[std::clamp(tkn_idx + offset, size_t(0), tkns.size())]; }
@@ -113,6 +118,7 @@ private:
 
     bool get_next_token();
     bool push(Token tkn) { tkns.push_back(tkn); return true; }
+    void post_tokenization();
 
     std::string input;
     std::vector<Token> tkns;
@@ -120,7 +126,6 @@ private:
     char* p = nullptr;
     char* eof = nullptr;
 
-    void after_load_init();
     bool push_next_token();
 };
 
@@ -134,4 +139,3 @@ constexpr bool is_assignment_operator_tkn(Token_enum type)
 {
     return type == '=' || (type >= tkn_update_add && type <= tkn_update_mod);
 }
-
