@@ -204,7 +204,7 @@ void Text_Input::draw()
 			    color = BLUE;
 			else if (tokens[tkn_idx].type == tkn_iterator)
 			    color = BROWN;
-			else if (tokens[tkn_idx].type >= tkn_fit && tokens[tkn_idx].type <= tkn_delete)
+			else if (tokens[tkn_idx].type >= tkn_fit && tokens[tkn_idx].type <= tkn_export)
 			    color = MAROON;
 			else
 			    color = BLACK;

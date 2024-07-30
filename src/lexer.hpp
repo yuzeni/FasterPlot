@@ -43,7 +43,7 @@ enum Token_enum : uint32_t {
     tkn_interp,
     tkn_extrema, // data new = extrema data 1 10
     tkn_delete,
-    // tkn_export,
+    tkn_export,
 
     /* mutliple char operators */
     tkn_update_add,

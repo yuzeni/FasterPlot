@@ -1,13 +1,14 @@
 
 #include "command_parser.hpp"
 
-#include "data_manager.hpp"
 #include <cstdint>
 #include <iostream>
 
+#include "global_vars.hpp"
 #include "utils.hpp"
 #include "lexer.hpp"
 #include "object_operations.hpp"
+#include "data_manager.hpp"
 
 static bool expect_next_token(Lexer &lexer) {
 
@@ -188,6 +189,9 @@ static Command_Operator get_command_operator(Token tkn)
 	break;
     case tkn_delete:
 	op.type = OP_delete;
+	break;
+    case tkn_export:
+	op.type = OP_export;
 	break;
     }
     return op;
@@ -449,7 +453,7 @@ void handle_command(Data_Manager &data_manager, Lexer& lexer)
     Command_Object object, arg_unary, arg_binary, arg_tertiary;
     Command_Operator op = get_command_operator(lexer.tkn());
 
-    if (op.type != OP_delete) {
+    if (op.type != OP_delete && op.type != OP_export) {
 	if(expand_iterators(data_manager, lexer))
 	    return;
     }
@@ -474,6 +478,7 @@ void handle_command(Data_Manager &data_manager, Lexer& lexer)
 	    print_op_binary(op, arg_unary, arg_binary, lexer);
 	}
 	goto exit;
+	
     case OP_smooth:
     case OP_interp:
 	arg_unary = expect_command_object(data_manager, lexer);
@@ -503,6 +508,7 @@ void handle_command(Data_Manager &data_manager, Lexer& lexer)
 		lexer.parsing_error(op.tkn, "Error occured trying to interpolate the data, perhaps X or Y were empty.");
 	}
 	goto exit;
+	
     case OP_show:
     case OP_hide:
 	arg_unary = expect_command_object(data_manager, lexer);
@@ -573,6 +579,7 @@ void handle_command(Data_Manager &data_manager, Lexer& lexer)
 				operator_type_name_table[op.type], object_type_name_table[arg_unary.type]);
 	}
 	goto exit;
+	
     case OP_delete:
 	arg_unary = expect_command_object(data_manager, lexer);
 	if (arg_unary.is_undefined())
@@ -678,6 +685,33 @@ void handle_command(Data_Manager &data_manager, Lexer& lexer)
 	    lexer.parsing_error(arg_unary.tkn, "The operator '%' doesn't work with '%s'.",
 				operator_type_name_table[op.type], object_type_name_table[arg_unary.type]);
 	}
+	goto exit;
+	
+    case OP_export:
+	arg_unary = expect_command_object(data_manager, lexer);
+	if (arg_unary.is_undefined())
+	    goto exit;
+
+	std::string file_name = DEFAULT_EXPORT_FILE_NAME;
+
+
+	if (lexer.tkn(1).type == tkn_string) {
+	    ++lexer.tkn_idx;
+	    file_name = lexer.tkn().sv;
+	}
+
+	switch (arg_unary.type) {
+	case OT_plot_data:
+	{
+	    std::vector<Plot_Data*> plot_data {arg_unary.obj.plot_data};
+	    data_manager.export_plot_data(file_name, plot_data);
+	}
+	    break;
+	case OT_plot_data_itr:
+	    data_manager.export_plot_data(file_name, *arg_unary.obj.plot_data_itr);
+	    break;
+	}
+	
 	goto exit;
     }
 

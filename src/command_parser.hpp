@@ -71,6 +71,7 @@ enum Operator_Type
     OP_hide,
     OP_extrema,
     OP_delete,
+    OP_export,
     OP_SIZE,
 };
 
@@ -92,6 +93,7 @@ inline const char *operator_type_name_table[OP_SIZE] {
     "hide",
     "extrema",
     "delete",
+    "export",
 };
 
 inline int op_arg_cnt_table[OP_SIZE] {

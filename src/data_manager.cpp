@@ -1,10 +1,13 @@
 #include "data_manager.hpp"
 
 #include <string>
+#include <vector>
 #include <fstream>
+#include <filesystem>
 
 #include "global_vars.hpp"
 #include "utils.hpp"
+
 
 // coordinate system
 constexpr int COORDINATE_SYSTEM_GRID_SPACING = 60;
@@ -17,7 +20,10 @@ constexpr Coordinate_System app_coordinate_system = {{0, 0}, {1, 0}, {0, 1}};
 
 // plot data
 constexpr int PLOT_DATA_FONT_SIZE = 18;
-constexpr Font* PLOT_DATA_FONT = &g_app_font_18;
+constexpr Font *PLOT_DATA_FONT = &g_app_font_18;
+
+#define EXPORT_FILE_TYPE ".txt"
+#define EXPORT_DIRECTORY "exports/"
 
 void Plot_Data::update_content_tree_element(size_t index)
 {
@@ -419,12 +425,23 @@ void Data_Manager::update_element_indices()
     }
 }
 
-void export_plot_data(std::string file_name, std::vector<Plot_Data*>& plot_data)
+void Data_Manager::export_plot_data(std::string file_name, std::vector<Plot_Data*>& plot_data)
 {
-    std::string orig_file_name = "ouput/" + file_name;
+
+    if(!(std::filesystem::exists(EXPORT_DIRECTORY))){
+        if (!(std::filesystem::create_directory(EXPORT_DIRECTORY))) {
+	    logger.log_error("Failed to create directory '%s', please create it manually.", EXPORT_DIRECTORY);
+	}
+    }
+    
+    file_name = EXPORT_DIRECTORY + file_name;
+    std::string orig_file_name = file_name;
+    file_name += EXPORT_FILE_TYPE;
+    
     int file_idx = 1;
     while (file_exists(file_name)) {
-	file_name = orig_file_name + '(' + std::to_string(file_idx) + ')';
+	file_name = orig_file_name + "_(" + std::to_string(file_idx) + ")" EXPORT_FILE_TYPE;
+	++file_idx;
     }
     
     std::ofstream out_file;
@@ -443,14 +460,14 @@ void export_plot_data(std::string file_name, std::vector<Plot_Data*>& plot_data)
 		    out_file << std::to_string(plot_data[pd_i]->y[i]) << ", ";
 		}
 	    }
-	    ++pd_i;
 	    if (plot_data[pd_i]->size() > i) {
-		out_file << std::to_string(plot_data[pd_i]->y[i]);
+		out_file << std::to_string(plot_data[pd_i]->y[i]) << '\n';
 	    }
 	}
+	out_file.close();
     }
     else {
-	logger.log_error("Unable to open file '%s'", file_name);
+	logger.log_error("Unable to open file '%s'", file_name.c_str());
     }
 }
 

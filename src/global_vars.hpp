@@ -10,3 +10,5 @@ inline Font g_app_font_22;
 inline bool g_keyboard_lock = false;
 
 inline Logger logger;
+
+constexpr std::string DEFAULT_EXPORT_FILE_NAME = "export";

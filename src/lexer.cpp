@@ -40,6 +40,7 @@ static const char *token_name_table[tkn_SIZE - 256]{
     "interp",
     "extrema",
     "delete",
+    "export",
     
     "+=",
     "-=",
@@ -91,6 +92,7 @@ Token_enum keyword_compare(const std::string_view sv)
     case cte_hash_c_str("interp"): return tkn_interp;
     case cte_hash_c_str("extrema"): return tkn_extrema;
     case cte_hash_c_str("delete"): return tkn_delete;
+    case cte_hash_c_str("export"): return tkn_export;
     default: return tkn_ident;
     }
 }
@@ -285,13 +287,16 @@ bool Lexer::get_next_token()
     
     // check for strings
     if (p != eof && *p == '\"') {
-	++p;
 	char* begin = p;
+	++p;
 	while (p != eof && *p != '\"')
 	    ++p;
-	std::string_view sv(begin, p);
-	++p;
-	return push(Token{tkn_string, begin, p, &sv});
+	std::string_view sv(begin + 1, p);
+	if (p != eof) {
+	    ++p;
+	    return push(Token{tkn_string, begin, p, &sv});
+	}
+	p = begin;
     }
     
     // check for operators | before number check because of operator '..'
@@ -306,7 +311,7 @@ bool Lexer::get_next_token()
 	++p;
 	return push(Token{Token_enum(*(p-1)), p-1, p});
     }
-
+		
     if (p == eof) return push(Token{tkn_eof, eof, eof});
 
     // when stuck, just get the next token.

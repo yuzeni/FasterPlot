@@ -2,6 +2,9 @@
 
 #include "raylib.h"
 
+#include <string>
+#include <vector>
+
 #include "function_fitting.hpp"
 #include "gui_elements.hpp"
 
@@ -153,7 +156,7 @@ struct Data_Manager
     void fit_camera_to_plot(Function* func);
     void zero_coord_sys_origin();
     void update_references();
-    void export_plot_data(std::string file_name, std::vector<Plot_Data*>* plot_data);
+    void export_plot_data(std::string file_name, std::vector<Plot_Data*>& plot_data);
     
 private:
 
