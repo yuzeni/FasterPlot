@@ -7,8 +7,9 @@
 #include <filesystem>
 
 #include "global_vars.hpp"
+#include "raylib.h"
 #include "utils.hpp"
-
+#include "command_parser.hpp"
 
 // coordinate system
 constexpr int COORDINATE_SYSTEM_GRID_SPACING = 60;
@@ -151,12 +152,11 @@ void Data_Manager::draw_functions()
     }
 }
 
-Data_Manager::Data_Manager()
+Data_Manager::Data_Manager() : key_board_lock_id(get_uuid())
 {
     camera.coord_sys.origin = {double(plot_padding.x), double(GetScreenHeight() - plot_padding.y)};
     camera.coord_sys.basis_x = {1, 0};
     camera.coord_sys.basis_y = {0, -1};
-    // default_x.content_element.name = "default";
 }
 
 Data_Manager::~Data_Manager()
@@ -164,6 +164,10 @@ Data_Manager::~Data_Manager()
     for (auto pd : plot_data)
 	delete pd;
     for (auto f : functions)
+	delete f;
+    for (auto pd : original_plot_data)
+	delete pd;
+    for (auto f : original_functions)
 	delete f;
 }
 
@@ -179,8 +183,6 @@ Plot_Data* Data_Manager::new_plot_data(Plot_Data *data)
     ++graph_color_array_idx;
     if (graph_color_array_idx >= graph_color_array_cnt)
 	graph_color_array_idx = 0;
-    
-    content_tree.add_element(&plot_data.back()->content_element);
 
     return plot_data.back();
 }
@@ -189,11 +191,10 @@ void Data_Manager::delete_plot_data(Plot_Data *data)
 {
     // resolve reference
     for (size_t i = 0; i < data->x_referencees.size(); ++i) {
-	data->x_referencees[i]->x = nullptr; //&default_x;
+	data->x_referencees[i]->x = nullptr;
     }
     
     plot_data.erase(plot_data.begin() + data->index);
-    content_tree.delete_element(&data->content_element);
     delete data;
 
     update_element_indices();
@@ -209,87 +210,135 @@ Function* Data_Manager::new_function()
     if (graph_color_array_idx >= graph_color_array_cnt)
 	graph_color_array_idx = 0;
     
-    content_tree.add_element(&functions.back()->content_element);
-    
     return functions.back();
 }
 
 void Data_Manager::delete_function(Function *func)
 {
     functions.erase(functions.begin() + func->index);
-    content_tree.delete_element(&func->content_element);
     delete func;
 
     update_element_indices();
 }
+
+void Data_Manager::copy_data_to_data(std::vector<Plot_Data*>& from_plot_data, std::vector<Plot_Data*>& to_plot_data,
+				     std::vector<Function*>& from_functions, std::vector<Function*>& to_functions)
+{
+    for(size_t i = 0; i < to_plot_data.size(); ++i) {
+	delete to_plot_data[i];
+    }
+
+    for(size_t i = 0; i < to_functions.size(); ++i) {
+	delete to_functions[i];
+    }
     
-void Data_Manager::add_plot_data(std::string file)
+    to_plot_data.clear();
+    to_functions.clear();
+    to_plot_data.resize(from_plot_data.size(), nullptr);
+    to_functions.resize(from_functions.size(), nullptr);
+
+    for(size_t i = 0; i < from_plot_data.size(); ++i) {
+        to_plot_data[i] = new Plot_Data;
+	*to_plot_data[i] = *from_plot_data[i];
+    }
+
+    for(size_t i = 0; i < from_functions.size(); ++i) {
+        to_functions[i] = new Function;
+	*to_functions[i] = *from_functions[i];
+    }
+}
+
+void Data_Manager::load_external_plot_data(std::string file)
 {
     std::vector<Plot_Data*> data_list = parse_numeric_csv_file(file);
     for(const auto data : data_list) {
 	new_plot_data(data);
     }
     fit_camera_to_plot();
+
+    copy_data_to_data(plot_data, original_plot_data, functions, original_functions);
+
+    logger.log_info("Loaded file(s)");
+    if (g_all_commands.has_commands()) {
+	g_all_commands.clear();
+	logger.log_info("and" UTILS_BRIGHT_RED " cleared the command list." UTILS_END_COLOR);
+    }
+    logger.log_info("\n");
 }
 
-void Data_Manager::draw()
+bool Data_Manager::keyboard_access()
+{
+    return g_keyboard_lock == 0 || g_keyboard_lock == key_board_lock_id;
+}
+
+void Data_Manager::update()
 {
     static int old_g_screen_height = GetScreenHeight();
     camera.coord_sys.origin.y += GetScreenHeight() - old_g_screen_height;
     old_g_screen_height = GetScreenHeight();
 
-    // // update default x
-    // size_t max_x = 0;
-    // for (const auto pd : plot_data) {
-    // 	max_x = pd->y.size() > max_x ? pd->y.size() : max_x;
-    // }
-
-    // if (default_x.y.size() != max_x) {
-    // 	default_x.y.resize(max_x);
-    // 	for (size_t i = 0; i < default_x.y.size(); ++i)
-    // 	    default_x.y[i] = i;
-    // }
-
     if (camera.is_undefined())
 	fit_camera_to_plot();
 
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-	Vector2 mouse_delta = GetMouseDelta();
-	camera.coord_sys.origin.x += mouse_delta.x;
-	camera.coord_sys.origin.y += mouse_delta.y;
-    }
+    if (keyboard_access()) {
 
-    if (!IsKeyDown(KEY_LEFT_CONTROL)) {
-	camera.coord_sys.basis_x = camera.coord_sys.basis_x + camera.coord_sys.basis_x * (GetMouseWheelMoveV().y / 10.f);
-    }
+	if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+	    Vector2 mouse_delta = GetMouseDelta();
+	    camera.coord_sys.origin.x += mouse_delta.x;
+	    camera.coord_sys.origin.y += mouse_delta.y;
+	}
+
+	if (!IsKeyDown(KEY_LEFT_CONTROL)) {
+	    camera.coord_sys.basis_x = camera.coord_sys.basis_x + camera.coord_sys.basis_x * (GetMouseWheelMoveV().y / 10.f);
+	}
 	
-    if (!IsKeyDown(KEY_LEFT_SHIFT)) {
-	camera.coord_sys.basis_y = camera.coord_sys.basis_y + camera.coord_sys.basis_y * (GetMouseWheelMoveV().y / 10.f);
+	if (!IsKeyDown(KEY_LEFT_SHIFT)) {
+	    camera.coord_sys.basis_y = camera.coord_sys.basis_y + camera.coord_sys.basis_y * (GetMouseWheelMoveV().y / 10.f);
+	}
+
+	if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+	    Vec2<double> normalize = Vec2<double>{camera.coord_sys.basis_x.length(), -camera.coord_sys.basis_y.length()};
+	    camera.coord_sys.origin = camera.coord_sys.origin + camera.origin_offset * normalize;
+	    camera.origin_offset = (camera.coord_sys.origin - Vec2<double>{double(GetMousePosition().x), double(GetMousePosition().y)}) / normalize;
+	    camera.coord_sys.origin = camera.coord_sys.origin - camera.origin_offset * normalize;
+	}
+    
+	if (IsKeyPressed(KEY_SPACE) && !g_keyboard_lock) {
+	    Vec2<double> normalize = Vec2<double>{camera.coord_sys.basis_x.length(), -camera.coord_sys.basis_y.length()};
+	    camera.coord_sys.origin = camera.coord_sys.origin + camera.origin_offset * normalize;
+	    camera.origin_offset = {0, 0};
+	    camera.coord_sys.origin = {double(plot_padding.x), double(GetScreenHeight() - plot_padding.y)};
+	    fit_camera_to_plot();
+	}
+
+	if (IsKeyDown(KEY_LEFT_CONTROL)) {
+	    if ((IsKeyPressed(KEY_Z) && g_all_commands.decr_command_idx()) ||
+		(IsKeyPressed(KEY_Y) && g_all_commands.incr_command_idx()))
+	    {
+		copy_data_to_data(original_plot_data, plot_data, original_functions, functions);
+		run_all_commands(*this);
+	    }
+	}
     }
 
-    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
-	Vec2<double> normalize = Vec2<double>{camera.coord_sys.basis_x.length(), -camera.coord_sys.basis_y.length()};
-	camera.coord_sys.origin = camera.coord_sys.origin + camera.origin_offset * normalize;
-	camera.origin_offset = (camera.coord_sys.origin - Vec2<double>{double(GetMousePosition().x), double(GetMousePosition().y)}) / normalize;
-	camera.coord_sys.origin = camera.coord_sys.origin - camera.origin_offset * normalize;
+    content_tree.clear();
+    
+    for (size_t i = 0; i < plot_data.size(); ++i) {
+	plot_data[i]->update_content_tree_element(i);
+	content_tree.add_element(&plot_data[i]->content_element);
     }
     
-    if (IsKeyPressed(KEY_SPACE) && !g_keyboard_lock) {
-	Vec2<double> normalize = Vec2<double>{camera.coord_sys.basis_x.length(), -camera.coord_sys.basis_y.length()};
-	camera.coord_sys.origin = camera.coord_sys.origin + camera.origin_offset * normalize;
-	camera.origin_offset = {0, 0};
-	camera.coord_sys.origin = {double(plot_padding.x), double(GetScreenHeight() - plot_padding.y)};
-	fit_camera_to_plot();
+    for (size_t i = 0; i < functions.size(); ++i) {
+	functions[i]->update_content_tree_element(i);
+	content_tree.add_element(&functions[i]->content_element);
     }
+}
 
+void Data_Manager::draw()
+{
     draw_vp_camera_coordinate_system(camera, COORDINATE_SYSTEM_GRID_SPACING);
     draw_plot_data();
     draw_functions();
-    
-    for (size_t i = 0; i < plot_data.size(); ++i)
-	plot_data[i]->update_content_tree_element(i);
-    for (size_t i = 0; i < functions.size(); ++i)
-	functions[i]->update_content_tree_element(i);
     content_tree.draw();
 }
 
@@ -407,19 +456,14 @@ void Data_Manager::fit_camera_to_plot(Function* func)
 // quadratic, only use when actually necessary
 void Data_Manager::update_references()
 {
-    for (size_t i = 0; i < plot_data.size(); ++i)
-    {
+    for (size_t i = 0; i < plot_data.size(); ++i) {
+	plot_data[i]->x_referencees.clear();
+    }
+    
+    for (size_t i = 0; i < plot_data.size(); ++i) {
 	// x-axis references
 	if (plot_data[i]->x) {
-	    bool already_referenced = false;
-	    for (auto ref : plot_data[i]->x->x_referencees) {
-		if (ref == plot_data[i]) {
-		    already_referenced = true;
-		}
-	    }
-	    if (!already_referenced) {
-		plot_data[i]->x->x_referencees.push_back(plot_data[i]);
-	    }
+	    plot_data[i]->x->x_referencees.push_back(plot_data[i]);
 	}
     }
 }
@@ -473,7 +517,7 @@ void Data_Manager::export_plot_data(std::string file_name, std::vector<Plot_Data
 	
 	for (size_t i = 0; i < max_size; ++i) {
 	    size_t pd_i = 0;
-	    for (pd_i; pd_i < plot_data.size() - 1; ++pd_i) {
+	    for (; pd_i < plot_data.size() - 1; ++pd_i) {
 		if (plot_data[pd_i]->size() > i) {
 		    out_file << std::to_string(plot_data[pd_i]->y[i]) << ", ";
 		}

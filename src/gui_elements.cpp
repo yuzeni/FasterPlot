@@ -105,13 +105,21 @@ void Text_Input::tokenize_input()
     lexer.tokenize();
 }
 
+bool Text_Input::keyboard_access()
+{
+    return g_keyboard_lock == 0 || g_keyboard_lock == keyboard_lock_id;
+}
+
 void Text_Input::update(Data_Manager& data_manager)
 {
+    if(!keyboard_access())
+	return;
+    
     int key = GetCharPressed();
 
     std::string& input = lexer.get_input();
     
-    if ((key >= 97) && (key <= 122))
+    if ((key >= 97) && (key <= 122) && key)
 	input_active = true;
     
     if (IsKeyPressed(KEY_ENTER))
@@ -122,9 +130,9 @@ void Text_Input::update(Data_Manager& data_manager)
 	input.clear();
     }
 
-    g_keyboard_lock = false;
+    g_keyboard_lock = 0;
     if (input_active) {
-	g_keyboard_lock = true;
+	g_keyboard_lock = keyboard_lock_id;
 
 	bool new_chars = false;
 	
@@ -220,16 +228,4 @@ void Text_Input::draw()
 	if (show_cursor)
 	    DrawTextEx(*TEXT_INPUT_FONT, "|", draw_pos, TEXT_INPUT_FONT_SIZE, 0, BLACK);
     }
-}
-
-void Log_Draw::draw()
-{
-    Vector2 draw_pos = Vec2<int>{GetScreenWidth(), GetScreenHeight()} - LOG_DRAW_OFFSET;
-    Vector2 orig_draw_pos = draw_pos;
-
-    std::vector<Log_Msg>& msgs = logger.log_msgs;
-    
-    // for(size_t i = 0; i < msgs.size(); ++i) {
-    // 	MeasureTextEx(*LOG_DRAW_FONT, msgs[i].msg, LOG)
-    // }
 }

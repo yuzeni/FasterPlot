@@ -45,6 +45,7 @@ struct Content_Tree
 	content_elements.push_back(elem);
     }
     void delete_element(Content_Tree_Element* elem);
+    void clear() { content_elements.clear(); }
     
 private:
     Content_Tree_Element base_element;
@@ -58,19 +59,17 @@ struct Data_Manager;
 
 struct Text_Input
 {
+    Text_Input() : keyboard_lock_id(get_uuid()) {}
     void draw();
     void update(Data_Manager& data_manger);
     
 private:
 
     void tokenize_input();
+    bool keyboard_access();
     
     bool input_active = false;
     Lexer lexer;
     bool show_cursor = true;
-};
-
-struct Log_Draw {
-
-    void draw();
+    const int keyboard_lock_id;
 };

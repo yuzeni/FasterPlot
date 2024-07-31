@@ -21,7 +21,7 @@ static bool handle_dropped_files(Data_Manager& data_manager) {
 		run_command_file_absolute_path(data_manager, std::string(path_list.paths[i]));
 	    }
 	    else {
-		data_manager.add_plot_data(path_list.paths[i]);
+		data_manager.load_external_plot_data(path_list.paths[i]);
 	    }
 	}
 	UnloadDroppedFiles(path_list);
@@ -44,20 +44,19 @@ int main()
 
     Data_Manager data_manager;
     Text_Input text_input;
-    Log_Draw log_draw;
 
     while (!WindowShouldClose()) {
 
 	handle_dropped_files(data_manager);
 
 	text_input.update(data_manager);
+	data_manager.update();
 
 	BeginDrawing();
 	{
 	    ClearBackground(WHITE);
 	    data_manager.draw();
 	    text_input.draw();
-	    log_draw.draw();
 	}
         EndDrawing();
     }

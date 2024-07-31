@@ -7,6 +7,7 @@
 #include "function_fitting.hpp"
 #include "utils.hpp"
 #include "command_parser.hpp"
+#include "global_vars.hpp"
 
 #define SCRIPT_FILE_TYPE ".script"
 #define SCRIPT_DIRECTORY "scripts/"
@@ -126,7 +127,7 @@ void run_command_file_absolute_path(Data_Manager &data_manager, std::string file
     handle_command_file(data_manager, file);
 }
 
-void save_command_file(std::vector<std::string> &commands, std::string file_name)
+void save_command_file(std::string file_name)
 {
     if (!(std::filesystem::exists(SCRIPT_DIRECTORY))) {
         if (!(std::filesystem::create_directory(SCRIPT_DIRECTORY))) {
@@ -149,7 +150,7 @@ void save_command_file(std::vector<std::string> &commands, std::string file_name
     out_file.open(file_name);
     if (out_file.is_open()) {
 
-	for (auto& cmd : commands) {
+	for (const auto& cmd : g_all_commands.get_commands()) {
 	    out_file << cmd << '\n';
 	}
 

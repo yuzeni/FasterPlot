@@ -166,3 +166,10 @@ inline bool file_exists(const std::string& file_name)
 }
 
 std::string get_file_extension(std::string file_name);
+
+inline uint64_t get_uuid()
+{
+    static uint64_t id = 0;
+    ++id;
+    return id;
+}

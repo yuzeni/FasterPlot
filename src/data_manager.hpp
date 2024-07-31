@@ -158,14 +158,14 @@ struct Data_Manager
     Data_Manager();
     ~Data_Manager();
 
-    void add_plot_data(std::string file = "../test_eingabe/simple.csv");
-    void draw();
-    
     std::vector<Plot_Data*> plot_data;
     std::vector<Function*> functions;
     VP_Camera camera;
     const Vec2<int> plot_padding = {50, 50};
 
+    void update();
+    void draw();
+    void load_external_plot_data(std::string file);
     Plot_Data* new_plot_data(Plot_Data* data = nullptr);
     void delete_plot_data(Plot_Data *data);
     Function* new_function();
@@ -182,11 +182,20 @@ private:
     // Plot_Data default_x;
     int graph_color_array_idx = 0;
     Content_Tree content_tree;
+    const int key_board_lock_id;
+
+    std::vector<Plot_Data*> original_plot_data;
+    std::vector<Function*> original_functions;
+
+    void copy_data_to_data(std::vector<Plot_Data*>& from_plot_data, std::vector<Plot_Data*>& to_plot_data,
+			   std::vector<Function*>& from_functions, std::vector<Function*>& to_functions);
 
     void fit_camera_to_plot();
     void draw_plot_data();
     void draw_functions();
     void update_element_indices();
+    bool keyboard_access();
+
 };
 
 Plot_Data *get_new_default_x_for_plot_data(Plot_Data *plot_data);

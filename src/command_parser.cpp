@@ -11,8 +11,6 @@
 #include "object_operations.hpp"
 #include "data_manager.hpp"
 
-std::vector<std::string> g_all_commands;
-
 static void handle_command_impl(Data_Manager &data_manager, Lexer &lexer);
 
 static bool expect_next_token(Lexer &lexer)
@@ -463,6 +461,45 @@ static bool expand_iterators(Data_Manager &data_manager, Lexer &lexer)
     return false;
 }
 
+static bool check_and_skip_newline(std::string &str, size_t& idx)
+{
+    if (str[idx] == '\n') {
+	return true;
+    }
+    
+    if (str[idx] == '\r') {
+	++idx;
+	while (idx < str.size() && str[idx] == '\r') {
+	    ++idx;
+	}
+	
+	if (str[idx] == '\n') {
+	    return true;
+	}
+    }
+    return false;
+}
+
+static bool check_newline(std::string &str, size_t idx)
+{
+    return check_and_skip_newline(str, idx);
+}
+
+void run_all_commands(Data_Manager &data_manager)
+{
+    size_t error_cnt = logger.error_cnt;
+    for (int64_t i = 0; i <= g_all_commands.get_index(); ++i) {
+	Lexer lexer;
+	lexer.get_input() = g_all_commands.get_commands()[i];
+	lexer.tokenize();
+	handle_command_impl(data_manager, lexer);
+	if (error_cnt != logger.error_cnt) {
+	    logger.log_error("Error occured trying to run all commands.");
+	    break;
+	}
+    }
+}
+
 void handle_command_file(Data_Manager &data_manager, std::string file)
 {
     std::string cmd;
@@ -470,14 +507,15 @@ void handle_command_file(Data_Manager &data_manager, std::string file)
     size_t i = 0;
     while (i < file.size()) {
 	size_t i_begin = i;
-	while(i < file.size() && file[i] != '\n') {
+	while(i < file.size() && !check_newline(file, i)) {
 	    ++i;
 	}
 	cmd = file.substr(i_begin, i - i_begin);
+	check_and_skip_newline(file, i);
 	Lexer lexer;
 	lexer.get_input() = cmd;
 	lexer.tokenize();
-	handle_command_impl(data_manager, lexer);
+	handle_command(data_manager, lexer);
 	if (error_cnt != logger.error_cnt) {
 	    logger.log_info(UTILS_BRIGHT_GREEN "Exiting script due to error.\n" UTILS_END_COLOR);
 	    break;
@@ -489,12 +527,12 @@ void handle_command_file(Data_Manager &data_manager, std::string file)
 void handle_command(Data_Manager &data_manager, Lexer &lexer)
 {
     size_t error_cnt = logger.error_cnt;
-    g_all_commands.push_back(lexer.get_input());
+    g_all_commands.add(lexer.get_input());
     
     handle_command_impl(data_manager, lexer);
     
     if (error_cnt != logger.error_cnt) {
-	g_all_commands.pop_back();
+	g_all_commands.pop();
     }
 }
 
@@ -793,6 +831,7 @@ static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
 	    goto exit;
 	}
 
+	g_all_commands.pop(); // remove the cmd for running the script
 	run_command_file(data_manager, std::string(arg_binary.tkn.sv));
 	goto exit;
 	
@@ -812,8 +851,8 @@ static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
 	    goto exit;
 	}
 
-	g_all_commands.pop_back(); // remove the cmd for saving the script
-	save_command_file(g_all_commands, std::string(arg_binary.tkn.sv));
+	g_all_commands.pop(); // remove the cmd for saving the script
+	save_command_file(std::string(arg_binary.tkn.sv));
 	goto exit;
     }
 
@@ -868,4 +907,3 @@ exit:
     }
     // logger.log_info("%s\n", lexer.get_input().c_str());
 }
-
