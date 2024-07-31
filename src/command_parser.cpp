@@ -485,18 +485,25 @@ static bool check_newline(std::string &str, size_t idx)
     return check_and_skip_newline(str, idx);
 }
 
-void run_all_commands(Data_Manager &data_manager)
+void re_run_all_commands(Data_Manager &data_manager)
 {
     size_t error_cnt = logger.error_cnt;
+    std::vector<Token> tkns_copy;
     for (int64_t i = 0; i <= g_all_commands.get_index(); ++i) {
 	Lexer lexer;
 	lexer.get_input() = g_all_commands.get_commands()[i];
 	lexer.tokenize();
+	tkns_copy = lexer.get_tokens();
 	handle_command_impl(data_manager, lexer);
 	if (error_cnt != logger.error_cnt) {
 	    logger.log_error("Error occured trying to run all commands.");
 	    break;
 	}
+	logger.log_info("> ");
+	for (auto& tkn : tkns_copy) {
+	    lexer.log_token(tkn);
+	}
+	logger.log_info("\n");
     }
 }
 
@@ -528,19 +535,25 @@ void handle_command(Data_Manager &data_manager, Lexer &lexer)
 {
     size_t error_cnt = logger.error_cnt;
     g_all_commands.add(lexer.get_input());
+
+    std::vector<Token> tkns_copy = lexer.get_tokens();
     
     handle_command_impl(data_manager, lexer);
     
     if (error_cnt != logger.error_cnt) {
 	g_all_commands.pop();
     }
+    else {
+	logger.log_info("> ");
+	for (auto& tkn : tkns_copy) {
+	    lexer.log_token(tkn);
+	}
+	logger.log_info("\n");
+    }
 }
 
 static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
 {
-
-    size_t error_cnt = logger.error_cnt;
-    
     Command_Object object, arg_unary, arg_binary, arg_tertiary;
     Command_Operator op = get_command_operator(lexer.tkn());
 
@@ -898,12 +911,4 @@ exit:
     
     lexer.tkn_idx = 0;
     data_manager.update_references();
-    if (error_cnt == logger.error_cnt) {
-	logger.log_info("> ");
-	for (auto& tkn : lexer.get_tokens()) {
-	    lexer.log_token(tkn);
-	}
-	logger.log_info("\n");
-    }
-    // logger.log_info("%s\n", lexer.get_input().c_str());
 }

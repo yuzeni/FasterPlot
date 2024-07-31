@@ -59,7 +59,7 @@ static void fix_comma_notation(bool inside_string, char* p) {
     }
 }
 
-std::vector<Plot_Data*> parse_numeric_csv_file(std::string file_name)
+std::vector<Plot_Data*> parse_numeric_csv_file(const std::string& file_name)
 {
     std::vector<Plot_Data*> data_list;
     

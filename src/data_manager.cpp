@@ -248,9 +248,9 @@ void Data_Manager::copy_data_to_data(std::vector<Plot_Data*>& from_plot_data, st
     }
 }
 
-void Data_Manager::load_external_plot_data(std::string file)
+void Data_Manager::load_external_plot_data(const std::string& file_name)
 {
-    std::vector<Plot_Data*> data_list = parse_numeric_csv_file(file);
+    std::vector<Plot_Data*> data_list = parse_numeric_csv_file(file_name);
     for(const auto data : data_list) {
 	new_plot_data(data);
     }
@@ -258,10 +258,10 @@ void Data_Manager::load_external_plot_data(std::string file)
 
     copy_data_to_data(plot_data, original_plot_data, functions, original_functions);
 
-    logger.log_info("Loaded file(s)");
+    logger.log_info("Loaded file '%s'.", file_name.c_str());
     if (g_all_commands.has_commands()) {
 	g_all_commands.clear();
-	logger.log_info("and" UTILS_BRIGHT_RED " cleared the command list." UTILS_END_COLOR);
+	logger.log_info(" and" UTILS_BRIGHT_RED " cleared the command list." UTILS_END_COLOR);
     }
     logger.log_info("\n");
 }
@@ -315,8 +315,13 @@ void Data_Manager::update()
 	    if ((IsKeyPressed(KEY_Z) && g_all_commands.decr_command_idx()) ||
 		(IsKeyPressed(KEY_Y) && g_all_commands.incr_command_idx()))
 	    {
+		if(IsKeyPressed(KEY_Z))
+		    logger.log_info("Revert command.\n");
+		if(IsKeyPressed(KEY_Y))
+		    logger.log_info("Revert reverting.\n");
+			
 		copy_data_to_data(original_plot_data, plot_data, original_functions, functions);
-		run_all_commands(*this);
+		re_run_all_commands(*this);
 	    }
 	}
     }

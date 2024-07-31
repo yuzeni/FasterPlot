@@ -115,7 +115,8 @@ void run_command_file(Data_Manager& data_manager, std::string file_name)
 
     auto content = parse_file_cstr(file_name.c_str());
     std::string file = content.first;
-    
+
+    logger.log_info("Running script '%s'\n", file_name.c_str());
     handle_command_file(data_manager, file);
 }
 
@@ -123,7 +124,8 @@ void run_command_file_absolute_path(Data_Manager &data_manager, std::string file
 {
     auto content = parse_file_cstr(file_name.c_str());
     std::string file = content.first;
-    
+
+    logger.log_info("Running script '%s'\n", file_name.c_str());
     handle_command_file(data_manager, file);
 }
 

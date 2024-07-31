@@ -135,4 +135,4 @@ struct Command_Operator
 struct Data_Manager;
 void handle_command(Data_Manager &data_manager, Lexer &lexer);
 void handle_command_file(Data_Manager &data_manager, std::string file);
-void run_all_commands(Data_Manager& data_manager);
+void re_run_all_commands(Data_Manager& data_manager);

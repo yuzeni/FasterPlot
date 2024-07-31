@@ -165,7 +165,7 @@ struct Data_Manager
 
     void update();
     void draw();
-    void load_external_plot_data(std::string file);
+    void load_external_plot_data(const std::string& file_name);
     Plot_Data* new_plot_data(Plot_Data* data = nullptr);
     void delete_plot_data(Plot_Data *data);
     Function* new_function();
