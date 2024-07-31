@@ -280,37 +280,35 @@ void Data_Manager::update()
     if (camera.is_undefined())
 	fit_camera_to_plot();
 
-    if (keyboard_access()) {
 
-	if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-	    Vector2 mouse_delta = GetMouseDelta();
-	    camera.coord_sys.origin.x += mouse_delta.x;
-	    camera.coord_sys.origin.y += mouse_delta.y;
-	}
 
-	if (!IsKeyDown(KEY_LEFT_CONTROL)) {
-	    camera.coord_sys.basis_x = camera.coord_sys.basis_x + camera.coord_sys.basis_x * (GetMouseWheelMoveV().y / 10.f);
-	}
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+	Vector2 mouse_delta = GetMouseDelta();
+	camera.coord_sys.origin.x += mouse_delta.x;
+	camera.coord_sys.origin.y += mouse_delta.y;
+    }
+
+    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+	Vec2<double> normalize = Vec2<double>{camera.coord_sys.basis_x.length(), -camera.coord_sys.basis_y.length()};
+	camera.coord_sys.origin = camera.coord_sys.origin + camera.origin_offset * normalize;
+	camera.origin_offset = (camera.coord_sys.origin - Vec2<double>{double(GetMousePosition().x), double(GetMousePosition().y)}) / normalize;
+	camera.coord_sys.origin = camera.coord_sys.origin - camera.origin_offset * normalize;
+    }
+
+    if (!IsKeyDown(KEY_LEFT_CONTROL)) {
+	camera.coord_sys.basis_x = camera.coord_sys.basis_x + camera.coord_sys.basis_x * (GetMouseWheelMoveV().y / 10.f);
+    }
 	
-	if (!IsKeyDown(KEY_LEFT_SHIFT)) {
-	    camera.coord_sys.basis_y = camera.coord_sys.basis_y + camera.coord_sys.basis_y * (GetMouseWheelMoveV().y / 10.f);
-	}
+    if (!IsKeyDown(KEY_LEFT_SHIFT)) {
+	camera.coord_sys.basis_y = camera.coord_sys.basis_y + camera.coord_sys.basis_y * (GetMouseWheelMoveV().y / 10.f);
+    }
 
-	if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
-	    Vec2<double> normalize = Vec2<double>{camera.coord_sys.basis_x.length(), -camera.coord_sys.basis_y.length()};
-	    camera.coord_sys.origin = camera.coord_sys.origin + camera.origin_offset * normalize;
-	    camera.origin_offset = (camera.coord_sys.origin - Vec2<double>{double(GetMousePosition().x), double(GetMousePosition().y)}) / normalize;
-	    camera.coord_sys.origin = camera.coord_sys.origin - camera.origin_offset * normalize;
-	}
-    
+    if (keyboard_access())
+    {
 	if (IsKeyPressed(KEY_SPACE) && !g_keyboard_lock) {
-	    Vec2<double> normalize = Vec2<double>{camera.coord_sys.basis_x.length(), -camera.coord_sys.basis_y.length()};
-	    camera.coord_sys.origin = camera.coord_sys.origin + camera.origin_offset * normalize;
-	    camera.origin_offset = {0, 0};
-	    camera.coord_sys.origin = {double(plot_padding.x), double(GetScreenHeight() - plot_padding.y)};
 	    fit_camera_to_plot();
 	}
-
+	
 	if (IsKeyDown(KEY_LEFT_CONTROL)) {
 	    if ((IsKeyPressed(KEY_Z) && g_all_commands.decr_command_idx()) ||
 		(IsKeyPressed(KEY_Y) && g_all_commands.incr_command_idx()))
@@ -319,7 +317,7 @@ void Data_Manager::update()
 		    logger.log_info("Revert command.\n");
 		if(IsKeyPressed(KEY_Y))
 		    logger.log_info("Revert reverting.\n");
-			
+
 		copy_data_to_data(original_plot_data, plot_data, original_functions, functions);
 		re_run_all_commands(*this);
 	    }
@@ -349,16 +347,21 @@ void Data_Manager::draw()
 
 void Data_Manager::zero_coord_sys_origin()
 {
-    camera.coord_sys.origin = {double(plot_padding.x), double(GetScreenHeight() - plot_padding.y)};
-    camera.origin_offset = {0, 0};
+    fit_camera_to_plot(true);
 }
 
-void Data_Manager::fit_camera_to_plot()
+void Data_Manager::fit_camera_to_plot(bool go_to_zero)
 {
     if (plot_data.empty() && functions.empty())
 	return;
 
+    camera.coord_sys.origin = {double(plot_padding.x), double(GetScreenHeight() - plot_padding.y)};
+    
     double max_x = -HUGE_VAL, max_y = -HUGE_VAL, min_x = HUGE_VAL, min_y = HUGE_VAL;
+
+    if (go_to_zero) {
+	max_x = 0, max_y = 0, min_x = 0, min_y = 0;
+    }
 	
     for(const auto& pd : plot_data) {
 	if (!pd->info.visible)
@@ -398,7 +401,7 @@ void Data_Manager::fit_camera_to_plot()
 
     if (max_x != -HUGE_VAL && min_x != HUGE_VAL) {
 	camera.coord_sys.basis_x = { double(GetScreenWidth() - plot_padding.x * 2) / (max_x - min_x), 0 };
-	camera.origin_offset.x = min_x;
+	camera.origin_offset.x = -min_x;
     }
     else {
 	camera.coord_sys.basis_x = { 1, 0 };
@@ -413,10 +416,16 @@ void Data_Manager::fit_camera_to_plot()
 	camera.coord_sys.basis_y = { 0, -1};
 	camera.origin_offset.x = 0;
     }
+
+    if (go_to_zero) {
+	camera.origin_offset = {0, 0};
+    }
 }
 
 void Data_Manager::fit_camera_to_plot(Plot_Data *plot_data)
 {
+    camera.coord_sys.origin = {double(plot_padding.x), double(GetScreenHeight() - plot_padding.y)};
+    
     double max_x = -HUGE_VAL, max_y = -HUGE_VAL, min_x = HUGE_VAL, min_y = HUGE_VAL;
 
     if (plot_data->x) {
@@ -439,7 +448,7 @@ void Data_Manager::fit_camera_to_plot(Plot_Data *plot_data)
     
     camera.coord_sys.basis_x = { double(GetScreenWidth() - plot_padding.x * 2) / (max_x - min_x), 0 };
     camera.coord_sys.basis_y = { 0 , -double(GetScreenHeight() - plot_padding.y * 2) / (max_y - min_y)};
-    camera.origin_offset = { min_x, -min_y };
+    camera.origin_offset = { -min_x, -min_y };
 }
 
 void Data_Manager::fit_camera_to_plot(Function* func)

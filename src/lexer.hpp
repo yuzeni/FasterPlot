@@ -47,6 +47,7 @@ enum Token_enum : uint32_t {
     tkn_export,
     tkn_run,
     tkn_save,
+    tkn_zero,
 
     /* mutliple char operators */
     tkn_update_add,

@@ -7,11 +7,12 @@ enum Object_Type
     OT_undefined,
     OT_plot_data,
     OT_function,
-    OT_value,
+    OT_token,
     OT_plot_data_ptr,
     OT_plot_data_itr,
     OT_function_itr,
     OT_plot_data_ptr_itr,
+    OT_value,
     OT_SIZE, 
 };
 
@@ -39,6 +40,7 @@ struct Command_Object
 	std::vector<Plot_Data*>* plot_data_itr;
 	std::vector<Plot_Data**>* plot_data_ptr_itr;
 	std::vector<Function*>* function_itr;
+	double val;
     } obj;
 
     void delete_iterator() {
@@ -74,6 +76,7 @@ enum Operator_Type
     OP_export,
     OP_run,
     OP_save,
+    OP_zero,
     OP_SIZE,
 };
 
@@ -98,6 +101,7 @@ inline const char *operator_type_name_table[OP_SIZE] {
     "export",
     "run",
     "save",
+    "zero",
 };
 
 inline int op_arg_cnt_table[OP_SIZE] {
@@ -117,6 +121,7 @@ inline int op_arg_cnt_table[OP_SIZE] {
     1,
     1,
     1,
+    0,
     0,
     0,
     0,

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils.hpp"
+#include <string_view>
 
 // y = a + b * cos(omega * x) + c sin(omega * x)
 struct Sinusoidal_Function
@@ -12,6 +13,7 @@ struct Sinusoidal_Function
     std::string get_string_value() const;
     std::string get_string_no_value() const;
     void fit_to_data(Plot_Data* data);
+    double get_parameter(std::string_view name) const;
 };
 
 // y = a * x + b
@@ -23,6 +25,7 @@ struct Linear_Function
     double operator()(double x) const;
     std::string get_string_value() const;
     std::string get_string_no_value() const;
+    double get_parameter(std::string_view name) const;
 };
 
 struct Undefined_Function {};

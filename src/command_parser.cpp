@@ -42,6 +42,10 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
 	case tkn_new:
 	    data_manager.new_plot_data();
 	    object.obj.plot_data = data_manager.plot_data.back();
+	    if (lexer.tkn(1).type == tkn_string) {
+		++lexer.tkn_idx;
+		object.obj.plot_data->info.header = lexer.tkn(0).sv;
+	    }
 	    break;
 	case tkn_int:
 	    if(lexer.tkn().i < int64_t(data_manager.plot_data.size())) {
@@ -89,6 +93,7 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
 	    return {};
 	}
 	break;
+	
     case tkn_function:
 	if (!expect_next_token(lexer))
 	    return {};
@@ -97,10 +102,31 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
 	case tkn_new:
 	    data_manager.new_function();
 	    object.obj.function = data_manager.functions.back();
+	    if (lexer.tkn(1).type == tkn_string) {
+		++lexer.tkn_idx;
+		object.obj.function->info.header = lexer.tkn(0).sv;
+	    }
 	    break;
 	case tkn_int:
-	    if(lexer.tkn().i < int64_t(data_manager.functions.size())) {
-		object.obj.function = data_manager.functions[lexer.tkn().i];
+	    if (lexer.tkn().i < int64_t(data_manager.functions.size())) {
+		if (lexer.tkn(1).type == tkn_int) {
+		    object.type = OT_value;
+		    object.obj.val = data_manager.functions[lexer.tkn().i]->operator()(lexer.tkn(1).i);
+		    ++lexer.tkn_idx;
+		}
+		else if (lexer.tkn(1).type == tkn_real) {
+		    object.type = OT_value;
+		    object.obj.val = data_manager.functions[lexer.tkn().i]->operator()(lexer.tkn(1).d);
+		    ++lexer.tkn_idx;
+		}
+		else if (lexer.tkn(1).type == tkn_ident) {
+		    object.type = OT_value;
+		    object.obj.val = data_manager.functions[lexer.tkn().i]->get_parameter(lexer.tkn(1).sv);
+		    ++lexer.tkn_idx;
+		}
+		else {
+		    object.obj.function = data_manager.functions[lexer.tkn().i];
+		}
 	    }
 	    else {
 		lexer.parsing_error(lexer.tkn(), "The function with index '%d' does not exist.", lexer.tkn().i);
@@ -122,8 +148,7 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
 	    return {};
 	}
         break;
-    case tkn_int:
-    case tkn_real:
+	
     case tkn_string:
     case tkn_true:
     case tkn_false:
@@ -132,8 +157,67 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
     case tkn_lines:
     case tkn_index:
     case tkn_script:
-	object.type = OT_value;
+	object.type = OT_token;
 	break;
+	
+    case tkn_int:
+	object.type = OT_value;
+	object.obj.val = object.tkn.i;
+	break;
+	
+    case tkn_real:
+	object.type = OT_value;
+	object.obj.val = object.tkn.d;
+	break;
+
+    case tkn_x:
+	object.type = OT_token;
+	if (lexer.tkn(1).type == tkn_points && lexer.tkn(2).type == tkn_int && lexer.tkn(3).type == tkn_data && lexer.tkn(4).type == tkn_int) {
+	    object.type = OT_value;
+	    
+	    if (lexer.tkn(4).i < 0 || lexer.tkn(4).i > int64_t(data_manager.plot_data.size())) {
+		lexer.parsing_error(lexer.tkn(4), "Out of bound.");
+		return {};
+	    }
+	    
+	    Plot_Data* plot_data = data_manager.plot_data[lexer.tkn(4).i];
+	    if (!plot_data->x) {
+		lexer.parsing_error(lexer.tkn(3), "Has no X.");
+		return {};
+	    }
+	    if (lexer.tkn(2).i < 0 || lexer.tkn(2).i > int64_t(plot_data->size())) {
+		lexer.parsing_error(lexer.tkn(2), "Out of bound.");
+		return {};
+	    }
+	    
+	    object.obj.val = plot_data->x->y[lexer.tkn(2).i];
+	    
+	    lexer.tkn_idx += 4;
+	}
+	break;
+	
+    case tkn_y:
+	object.type = OT_token;
+	if (lexer.tkn(1).type == tkn_points && lexer.tkn(2).type == tkn_int && lexer.tkn(3).type == tkn_data && lexer.tkn(4).type == tkn_int) {
+	    object.type = OT_value;
+	    
+	    if (lexer.tkn(4).i < 0 || lexer.tkn(4).i > int64_t(data_manager.plot_data.size())) {
+		lexer.parsing_error(lexer.tkn(4), "Out of bound.");
+		return {};
+	    }
+	    
+	    Plot_Data* plot_data = data_manager.plot_data[lexer.tkn(4).i];
+	    if (lexer.tkn(2).i < 0 || lexer.tkn(2).i > int64_t(plot_data->size())) {
+		lexer.parsing_error(lexer.tkn(2), "Out of bound.");
+		return {};
+	    }
+	    
+	    object.obj.val = plot_data->y[lexer.tkn(2).i];
+	    
+	    lexer.tkn_idx += 4;
+	}
+	break;
+	
     default:
 	return {};
     }
@@ -204,55 +288,57 @@ static Command_Operator get_command_operator(Token tkn)
     case tkn_save:
 	op.type = OP_save;
 	break;
+    case tkn_zero:
+	op.type = OP_zero;
+	break;
     }
     return op;
 }
 
 void op_binary_assign(Lexer& lexer, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary, double (*op_fun)(double, double))
 {
-    if (object.type == OT_function) {
-	logger.log_error("Can't assign an addition result to a function.");
-	return;
-    }
-
-    object.obj.plot_data->y.clear();
+    switch(object.type) {
+    case OT_plot_data:
+	object.obj.plot_data->y.clear();
     
-    if (arg_unary.type == OT_function && arg_binary.type == OT_function) {
-	if (!object.obj.plot_data->x) {
-	    logger.log_error("Can't combine functions and assign the result to a plot, if the plot does not have an X set.");
-	    return;
+	if (arg_unary.type == OT_function && arg_binary.type == OT_function) {
+	    for (size_t ix = 0; ix < object.obj.plot_data->size(); ++ix) {
+		double x = object.obj.plot_data->x ? object.obj.plot_data->x->y[ix] : ix;
+		object.obj.plot_data->y.push_back(op_fun(arg_unary.obj.function->operator()(x), arg_binary.obj.function->operator()(x)));
+	    }
 	}
-	for (size_t ix = 0; ix < object.obj.plot_data->x->y.size(); ++ix) {
-	    double x = object.obj.plot_data->x->y[ix];
-	    object.obj.plot_data->y.push_back(op_fun(arg_unary.obj.function->operator()(x), arg_binary.obj.function->operator()(x)));
-	}
-    }
-    else if (arg_unary.type == OT_plot_data && arg_binary.type == OT_plot_data) {
-	if (arg_unary.obj.plot_data->x != arg_binary.obj.plot_data->x) {
-	    lexer.parsing_error(op.tkn, "The two data do not share the same X. Therefore they can't be combined.");
-	    return;
-	}
-	Plot_Data* x = arg_unary.obj.plot_data->x;
-	for (size_t ix = 0; ix < x->y.size(); ++ix) {
-	    object.obj.plot_data->y.push_back(op_fun(arg_unary.obj.plot_data->y[ix], arg_binary.obj.plot_data->y[ix]));
-	}
-	object.obj.plot_data->x = x;
-    }
-    else {
-	Plot_Data* plot_data;
-	Function* function;
-	if (arg_unary.type == OT_plot_data) {
-	    plot_data = arg_unary.obj.plot_data;
-	    function = arg_binary.obj.function;
+	else if (arg_unary.type == OT_plot_data && arg_binary.type == OT_plot_data) {
+	    if (arg_unary.obj.plot_data->x != arg_binary.obj.plot_data->x) {
+		lexer.parsing_error(op.tkn, "The two data do not share the same X. Therefore they can't be combined.");
+		return;
+	    }
+	    for (size_t ix = 0; ix < std::min(arg_unary.obj.plot_data->size(), arg_binary.obj.plot_data->size()); ++ix) {
+		object.obj.plot_data->y.push_back(op_fun(arg_unary.obj.plot_data->y[ix], arg_binary.obj.plot_data->y[ix]));
+	    }
+	    object.obj.plot_data->x = arg_unary.obj.plot_data->x;
 	}
 	else {
-	    plot_data = arg_binary.obj.plot_data;
-	    function = arg_unary.obj.function;
-	}
-	for (size_t ix = 0; ix < plot_data->x->y.size(); ++ix)
-	    object.obj.plot_data->y.push_back(op_fun(plot_data->y[ix], function->operator()(plot_data->x->y[ix])));
-	object.obj.plot_data->x = plot_data->x;
+	    Plot_Data* plot_data;
+	    Function* function;
+	    if (arg_unary.type == OT_plot_data) {
+		plot_data = arg_unary.obj.plot_data;
+		function = arg_binary.obj.function;
+	    }
+	    else {
+		plot_data = arg_binary.obj.plot_data;
+		function = arg_unary.obj.function;
+	    }
+	    for (size_t ix = 0; ix < plot_data->size(); ++ix)
+		object.obj.plot_data->y.push_back(op_fun(plot_data->y[ix], function->operator()(plot_data->x ? plot_data->x->y[ix] : ix)));
+	    object.obj.plot_data->x = plot_data->x;
+	}	
+	break;
+	
+    case OT_function:
+	logger.log_error("Functions not implemented yet.");
+	break;
     }
+
 }
 
 void op_unary_assign(Command_Object object, Command_Object arg_unary)
@@ -369,19 +455,7 @@ double op_binary_value(Command_Object arg_unary, Command_Object arg_binary, doub
 	return 0;
     }
 
-    double a1 = 0;
-    if (arg_unary.tkn.type == tkn_int)
-	a1 = arg_unary.tkn.i;
-    else if (arg_unary.tkn.type == tkn_real)
-	a1 = arg_unary.tkn.d;
-
-    double a2 = 0;
-    if (arg_binary.tkn.type == tkn_int)
-	a2 = arg_binary.tkn.i;
-    else if (arg_binary.tkn.type == tkn_real)
-	a2 = arg_binary.tkn.d;
-
-    return op_fun(a1, a2);
+    return op_fun(arg_unary.obj.val, arg_binary.obj.val);
 }
 
 static double execute_operation_value(Command_Operator op, Command_Object arg_unary, Command_Object arg_binary, Lexer &lexer)
@@ -409,10 +483,7 @@ static double execute_operation_value(Command_Operator op, Command_Object arg_un
 static void print_unary(Command_Object arg_unary, Lexer& lexer)
 {
     if (arg_unary.type == OT_value) {
-	if (arg_unary.tkn.type == tkn_int)
-	    std::cout << arg_unary.tkn.i << '\n';
-	else if (arg_unary.tkn.type == tkn_real)
-	    std::cout << arg_unary.tkn.d << '\n';
+	logger.log_info("%f\n", arg_unary.obj.val);
     }
     else {
 	lexer.parsing_error(arg_unary.tkn, "Expected a number.");
@@ -597,7 +668,7 @@ static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
 	arg_binary = expect_command_object(data_manager, lexer);
 	if (arg_binary.is_undefined())
 	    goto exit;
-	if (arg_binary.type != OT_value || arg_binary.tkn.type != tkn_int) {
+	if (arg_binary.tkn.type != tkn_int) {
 	    lexer.parsing_error(lexer.tkn(), "Expected an integer value, but got '%s' '%s'.",
 				object_type_name_table[arg_unary.type], get_token_name_str(arg_binary.tkn.type).c_str());
 	    goto exit;
@@ -635,7 +706,7 @@ static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
 		arg_unary.obj.function->info.visible = (op.type == OP_show ? true : false);
 	    }
 	}
-	else if (arg_unary.type == OT_value) {
+	else if (arg_unary.type == OT_token) {
 	    arg_binary = expect_command_object(data_manager, lexer);
 	    if (arg_binary.is_undefined())
 		goto exit;
@@ -689,23 +760,28 @@ static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
 	if (arg_unary.is_undefined())
 	    goto exit;
 
-	if (arg_unary.type == OT_plot_data) {
+	switch(arg_unary.type) {
+	case OT_plot_data:
 	    data_manager.delete_plot_data(arg_unary.obj.plot_data);
-	}
-	else if (arg_unary.type == OT_function) {
+	    break;
+	    
+	case OT_function:
 	    data_manager.delete_function(arg_unary.obj.function);
-	}
-	else if (arg_unary.type == OT_plot_data_itr) {
+	    break;
+	    
+	case OT_plot_data_itr:
 	    for (auto pd : *(arg_unary.obj.plot_data_itr)) {
 		data_manager.delete_plot_data(pd);
 	    }
-	}
-	else if (arg_unary.type == OT_function_itr) {
+	    break;
+	    
+	case OT_function_itr:
 	    for (auto func : *(arg_unary.obj.function_itr)) {
 		data_manager.delete_function(func);
 	    }
-	}
-	else if (arg_unary.type == OT_value) {
+	    break;
+	    
+	case OT_token:
 	    switch (arg_unary.tkn.type) {
 	    case tkn_points:
 		if (lexer.tkn(1).type == tkn_iterator) {
@@ -721,7 +797,7 @@ static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
 								arg_tertiary.obj.plot_data->y.begin() + arg_point_itr->back() + 1);
 			    if (arg_tertiary.obj.plot_data->x) {
 				arg_tertiary.obj.plot_data->x->y.erase(arg_tertiary.obj.plot_data->x->y.begin() + (*arg_point_itr)[0],
-								    arg_tertiary.obj.plot_data->x->y.begin() + arg_point_itr->back() + 1);
+								       arg_tertiary.obj.plot_data->x->y.begin() + arg_point_itr->back() + 1);
 			    }
 			}
 			else {
@@ -786,11 +862,13 @@ static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
 	    default:
 		lexer.parsing_error(arg_unary.tkn, "Value type '%s', is not supported.", get_token_name_str(arg_unary.tkn.type).c_str());
 	    }
-	}
-	else {
+	    break;
+	    
+	default:
 	    lexer.parsing_error(arg_unary.tkn, "The operator '%' doesn't work with '%s'.",
 				operator_type_name_table[op.type], object_type_name_table[arg_unary.type]);
 	}
+
 	goto exit;
 	
     case OP_export:
@@ -867,6 +945,10 @@ static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
 	g_all_commands.pop(); // remove the cmd for saving the script
 	save_command_file(std::string(arg_binary.tkn.sv));
 	goto exit;
+
+    case OP_zero:
+	data_manager.zero_coord_sys_origin();
+	goto exit;
     }
 
     // object = op unary binary (assign expression to object)
@@ -886,13 +968,22 @@ static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
 	op = get_command_operator(lexer.tkn());
     }
 
-    if (op_arg_cnt_table[op.type] >= 1) {
-	arg_unary = expect_command_object(data_manager, lexer);
-	if (arg_unary.is_undefined()) {
-	    lexer.parsing_error(arg_unary.tkn, "Undefined object.");
+    arg_unary = expect_command_object(data_manager, lexer);
+    if (arg_unary.is_undefined()) {
+	lexer.parsing_error(arg_unary.tkn, "Undefined object.");
+	goto exit;
+    }
+    
+    if (get_command_operator(lexer.tkn(1)).type != OP_undefined) {
+	if (!expect_next_token(lexer))
+	    goto exit;
+	if (op.type != OP_assign) {
+	    lexer.parsing_error(lexer.tkn(), "This operator is unexpected.");
 	    goto exit;
 	}
+	op = get_command_operator(lexer.tkn());
     }
+    
     if (op_arg_cnt_table[op.type] >= 2) {
 	arg_binary = expect_command_object(data_manager, lexer);
 	if (arg_binary.is_undefined()) {
@@ -908,6 +999,7 @@ exit:
     object.delete_iterator();
     arg_unary.delete_iterator();
     arg_binary.delete_iterator();
+    arg_tertiary.delete_iterator();
     
     lexer.tkn_idx = 0;
     data_manager.update_references();

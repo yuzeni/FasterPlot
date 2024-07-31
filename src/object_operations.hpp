@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <vector>
+#include "utils.hpp"
 
 struct Plot_Data;
 struct Function;
@@ -22,3 +22,9 @@ bool get_extrema_plot_data(Plot_Data *object_plot_data, Plot_Data *plot_data);
 void run_command_file(Data_Manager &data_manager, std::string file_name);
 void run_command_file_absolute_path(Data_Manager &data_manager, std::string file_name);
 void save_command_file(std::string file_name);
+
+template <typename T>
+struct Function_Object
+{
+    Vec2<double> operator()(size_t idx) { return T(idx); }
+};

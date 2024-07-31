@@ -100,8 +100,6 @@ void Content_Tree::delete_element(Content_Tree_Element *elem)
 
 void Text_Input::tokenize_input()
 {
-    // lexer = Lexer{};
-    // lexer.load_input_from_string(input);
     lexer.tokenize();
 }
 
@@ -119,7 +117,7 @@ void Text_Input::update(Data_Manager& data_manager)
 
     std::string& input = lexer.get_input();
     
-    if ((key >= 97) && (key <= 122) && key)
+    if ((key >= 33) && (key <= 126))
 	input_active = true;
     
     if (IsKeyPressed(KEY_ENTER))
@@ -137,7 +135,7 @@ void Text_Input::update(Data_Manager& data_manager)
 	bool new_chars = false;
 	
 	while (key > 0) {
-	    if ((key >= 32) && (key <= 127)) {
+	    if ((key >= 32) && (key <= 126)) {
 		input += (char)key;
 	    }
 	    key = GetCharPressed();  // get next character in the queue
@@ -212,7 +210,7 @@ void Text_Input::draw()
 			    color = BLUE;
 			else if (tokens[tkn_idx].type == tkn_iterator)
 			    color = BROWN;
-			else if (tokens[tkn_idx].type >= tkn_fit && tokens[tkn_idx].type <= tkn_save)
+			else if (tokens[tkn_idx].type >= tkn_fit && tokens[tkn_idx].type <= tkn_zero)
 			    color = MAROON;
 			else
 			    color = BLACK;

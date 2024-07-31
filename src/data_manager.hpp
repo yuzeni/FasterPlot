@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <limits>
 
 #include "function_fitting.hpp"
 #include "gui_elements.hpp"
@@ -113,6 +114,15 @@ struct Function
 	return false;
     }
 
+    double get_parameter(std::string_view name) const
+    {
+	switch(type) {
+	case FT_linear:   return func.linear.get_parameter(name);
+	case FT_sinusoid: return func.sinusoid.get_parameter(name);
+	}
+	return std::numeric_limits<double>().quiet_NaN();
+    }
+
     void update_content_tree_element(size_t index);
     
     union {
@@ -190,7 +200,7 @@ private:
     void copy_data_to_data(std::vector<Plot_Data*>& from_plot_data, std::vector<Plot_Data*>& to_plot_data,
 			   std::vector<Function*>& from_functions, std::vector<Function*>& to_functions);
 
-    void fit_camera_to_plot();
+    void fit_camera_to_plot(bool go_to_zero = false);
     void draw_plot_data();
     void draw_functions();
     void update_element_indices();

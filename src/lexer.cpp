@@ -44,6 +44,7 @@ static const char *token_name_table[tkn_SIZE - 256]{
     "export",
     "run",
     "save",
+    "zero",
     
     "+=",
     "-=",
@@ -99,6 +100,7 @@ Token_enum keyword_compare(const std::string_view sv)
     case cte_hash_c_str("export"): return tkn_export;
     case cte_hash_c_str("run"): return tkn_run;
     case cte_hash_c_str("save"): return tkn_save;
+    case cte_hash_c_str("zero"): return tkn_zero;
     default: return tkn_ident;
     }
 }
@@ -411,7 +413,7 @@ void Lexer::log_token(Token &tkn) const
 	color = UTILS_BLUE;
     else if (tkn.type == tkn_iterator)
 	color = UTILS_MAGENTA;
-    else if (tkn.type >= tkn_fit && tkn.type <= tkn_save)
+    else if (tkn.type >= tkn_fit && tkn.type <= tkn_zero)
 	color = UTILS_BRIGHT_RED;
     else
 	color = UTILS_WHITE;

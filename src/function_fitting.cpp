@@ -1,8 +1,10 @@
 #include "function_fitting.hpp"
 
 #include "data_manager.hpp"
+#include "utils.hpp"
 
 #include <cmath>
+#include <limits>
 #include <string>
 
 double Sinusoidal_Function::operator()(double x) const
@@ -20,6 +22,17 @@ std::string Sinusoidal_Function::get_string_no_value() const
     return "a + b * cos(omega * x) + c * sin(omega * x)";
 }
 
+double Sinusoidal_Function::get_parameter(std::string_view name) const
+{
+    switch(hash_string_view(name)) {
+    case cte_hash_c_str("a"): return a;
+    case cte_hash_c_str("b"): return b;
+    case cte_hash_c_str("c"): return c;
+    case cte_hash_c_str("omega"): return omega;
+    }
+    return std::numeric_limits<double>::quiet_NaN();
+}
+
 double Linear_Function::operator()(double x) const
 {
     return a * x + b;
@@ -33,6 +46,15 @@ std::string Linear_Function::get_string_value() const
 std::string Linear_Function::get_string_no_value() const
 {
     return "a * x + b";
+}
+
+double Linear_Function::get_parameter(std::string_view name) const
+{
+    switch(hash_string_view(name)) {
+    case cte_hash_c_str("a"): return a;
+    case cte_hash_c_str("b"): return b;
+    }
+    return std::numeric_limits<double>::quiet_NaN();
 }
 
 static void get_SS_n__with_x(double* SS_n, int n, Plot_Data* data)
