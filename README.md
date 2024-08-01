@@ -2,7 +2,7 @@
 ## Building on Windows
 
 Run the `build.bat` script from the Microsoft Visual Studio _"x64 Native Tools Command Prompt"_ or from any command prompt with the `vcvars64.bat` environment.\
-Alternatively, prebuilt binaries can be found in the relases.
+Alternatively, prebuilt binaries can be found in the [releases](https://github.com/yuzeni/Flusssensor/releases).
  
 ## Documentation
 
