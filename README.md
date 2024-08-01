@@ -115,17 +115,30 @@ Similarly if a command file is loaded, all its commands will be copied to the co
 Dropping the script onto the window is also supported.\
 The script must have the file extension *.script*.
 
+##### printing data
+The commands must be prefixed with `=` to print the result.
+- `= x points 20 data 7` (prints the x value of the 20th points of **data 7**)
+- `= y points 0..4 data 7` (prints the y value of points 0..4 of **data 7**)
+- `= function 3 4525.67` (prints the result of **function 3** at X `4525.67`)
+- `= function 5 b` (prints the parameter **b** of **function 5**)
+These expressions can also be used with the basic mathematical operators.
+
 ##### basic mathematical operations
 
-Assigning things.
+- Assigning things.
+  - `data 0 = data 1`
+  - `data new = data 1..3`
+  - `function new = functin 8`
+  - `data new = data 3 + data 6` (requires data 3 x = data 6 x)
+  - `data 4 = data 3 - data 6` (requires data 3 x = data 6 x)
+  - `data new = data 3 * data 1..8` (requires data 3 x = data 1..8 x)
+  - `data new = data 3 / data 6` (requires data 3 x = data 6 x)
+  - `data new = data 0..10 * data 0..10` (double iteration)
 
-- `data new = data 1..3`
-- `function new = functin 8`
-- `data new = data 3 + data 6` (requires data 3 x = data 6 x)
-- `data 4 = data 3 - data 6` (requires data 3 x = data 6 x)
-- `data new = data 3 * data 1..8` (requires data 3 x = data 1..8 x)
-- `data new = data 3 / data 6` (requires data 3 x = data 6 x)
+- Operation assinging things. Supports the same operations as above.
+  - `data 0 += data 1..2`
 
-Operation assinging things. Supports the same operations as above.
-- `data 0 += data 1..2`
+- Cacluating with single values.
+  Currently it is not possible to assign to single values.
+  - `= function 3 d - function 4 d`
 
