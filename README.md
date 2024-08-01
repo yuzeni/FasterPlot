@@ -45,9 +45,13 @@ Resets to origin to (0,0), while fitting the window to the content.
 
 ##### `fit`
 Fits a **function** to **data**.
-- `function 0 = fit sinusoid data 3`
-- `function new = fit sinusoid data 3`
-- `function new "my fit of data 0" = fit sinusoid data 0`
+- `function 0 = fit sinusoid data 3 0` (with 0 refine iterations)
+- `function new = fit sinusoid data 3 10` (with 10 refine iterations)
+- `function new "my fit of data 0" = fit sinusoid data 0 0,100,1000` (with 0,10,1000 refine iterations)
+
+##### `help`
+Prints this documentation to the shell.
+- `help`
 
 ##### `hide`
 Hides objects...
