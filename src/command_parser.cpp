@@ -11,6 +11,15 @@
 #include "object_operations.hpp"
 #include "data_manager.hpp"
 
+void Command_Object::delete_new_object(Data_Manager& data_manager) {
+    if (new_object) {
+	switch(type) {
+	case OT_plot_data: data_manager.delete_plot_data(obj.plot_data); break;
+	case OT_function: data_manager.delete_function(obj.function); break;
+	}
+    }
+}
+
 static void handle_command_impl(Data_Manager &data_manager, Lexer &lexer);
 
 static bool expect_next_token(Lexer &lexer)
@@ -41,6 +50,7 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
 	switch (lexer.tkn().type) {
 	case tkn_new:
 	    data_manager.new_plot_data();
+	    object.new_object = true;
 	    object.obj.plot_data = data_manager.plot_data.back();
 	    if (lexer.tkn(1).type == tkn_string) {
 		++lexer.tkn_idx;
@@ -101,6 +111,7 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
 	switch(lexer.tkn().type) {
 	case tkn_new:
 	    data_manager.new_function();
+	    object.new_object = true;
 	    object.obj.function = data_manager.functions.back();
 	    if (lexer.tkn(1).type == tkn_string) {
 		++lexer.tkn_idx;
@@ -399,6 +410,7 @@ void op_extrema_assign(Lexer &lexer, Data_Manager &data_manager, Command_Object 
     }    
 
     data_manager.new_plot_data();
+    object.new_object = true;
     object.obj.plot_data->x = data_manager.plot_data.back();
     
     get_extrema_plot_data(object.obj.plot_data, arg_unary.obj.plot_data);
@@ -507,29 +519,29 @@ static Command_Object expect_command_object(Data_Manager& data_manager, Lexer& l
     return arg;
 }
 
-static bool expand_iterators(Data_Manager &data_manager, Lexer &lexer)
+static std::pair<size_t, size_t> expand_iterators(Data_Manager &data_manager, Lexer &lexer, int sub_level)
 {
     std::vector<Token> &tkns = lexer.get_tokens();
-    bool found_iterator = false;
+    size_t iterator_size = 0;
+    size_t iterator_error_size = 0; // the number of iterator elements which produced erronious results.
 
     for (size_t tkn_idx = 0; tkn_idx < tkns.size(); ++tkn_idx) {
 	if (tkns[tkn_idx].type == tkn_iterator) {
 	    Token iterator = tkns[tkn_idx];
-	    found_iterator = true;
+	    iterator.size = iterator.itr->size();
 	    
 	    tkns.erase(tkns.begin() + tkn_idx);
 	    for (int64_t it : *(iterator.itr)) {
 		tkns.insert(tkns.begin() + tkn_idx, Token{tkn_int, iterator.ptr, iterator.ptr + iterator.size, &it});
-		handle_command_impl(data_manager, lexer);
+		iterator_error_size += size_t(!handle_command(data_manager, lexer, sub_level + 1));
+		++iterator_size;
 		tkns.erase(tkns.begin() + tkn_idx);
 	    }
-	    iterator.delete_itr();
+	    tkns.insert(tkns.begin() + tkn_idx, iterator); // give the iterator back
 	}
     }
 
-    if (found_iterator)
-	return true;
-    return false;
+    return {iterator_size, iterator_error_size};
 }
 
 static bool check_and_skip_newline(std::string &str, size_t& idx)
@@ -559,22 +571,27 @@ static bool check_newline(std::string &str, size_t idx)
 void re_run_all_commands(Data_Manager &data_manager)
 {
     size_t error_cnt = logger.error_cnt;
-    std::vector<Token> tkns_copy;
     for (int64_t i = 0; i <= g_all_commands.get_index(); ++i) {
+	const Command& cmd = g_all_commands.get_commands()[i];
+	
 	Lexer lexer;
-	lexer.get_input() = g_all_commands.get_commands()[i];
+	lexer.get_input() = cmd.cmd;
 	lexer.tokenize();
-	tkns_copy = lexer.get_tokens();
-	handle_command_impl(data_manager, lexer);
+	
+	if (check_flag(cmd.flags, CF_hidden) || check_flag(cmd.flags, CF_only_on_save)) {
+	    logger.log_info(UTILS_BRIGHT_BLACK "not executed" UTILS_END_COLOR " > ");
+	    for (auto& tkn : lexer.get_tokens()) {
+		lexer.log_token(tkn);
+	    }
+	    logger.log_info("\n");
+	    continue;
+	}
+		
+	handle_command(data_manager, lexer, 0, false);
 	if (error_cnt != logger.error_cnt) {
 	    logger.log_error("Error occured trying to run all commands.");
-	    break;
+	    break;	    
 	}
-	logger.log_info("> ");
-	for (auto& tkn : tkns_copy) {
-	    lexer.log_token(tkn);
-	}
-	logger.log_info("\n");
     }
 }
 
@@ -602,35 +619,40 @@ void handle_command_file(Data_Manager &data_manager, std::string file)
     }
 }
 
-void handle_command(Data_Manager &data_manager, Lexer &lexer)
+bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, bool add_command)
 {
     size_t error_cnt = logger.error_cnt;
-    g_all_commands.add(lexer.get_input());
 
-    std::vector<Token> tkns_copy = lexer.get_tokens();
-    
-    handle_command_impl(data_manager, lexer);
-    
-    if (error_cnt != logger.error_cnt) {
-	g_all_commands.pop();
+    // only log the primary command.
+    if (sub_level == 0 && add_command) {
+	g_all_commands.add(lexer.get_input());
     }
-    else {
-	logger.log_info("> ");
-	for (auto& tkn : tkns_copy) {
-	    lexer.log_token(tkn);
-	}
-	logger.log_info("\n");
-    }
-}
 
-static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
-{
+    // indent for every sub level.
+    for (int i = 0; i < sub_level; ++i) {
+	logger.log_info("  ");
+    }
+    
+    logger.log_info("> ");
+    for (auto& tkn : lexer.get_tokens()) {
+	lexer.log_token(tkn);
+    }
+    logger.log_info("\n");
+    
     Command_Object object, arg_unary, arg_binary, arg_tertiary;
     Command_Operator op = get_command_operator(lexer.tkn());
 
     if (op.type != OP_delete && op.type != OP_export) {
-	if(expand_iterators(data_manager, lexer))
-	    return;
+	auto expand_result = expand_iterators(data_manager, lexer, sub_level);
+	if (expand_result.first) {
+	    if (expand_result.first == expand_result.second) { // if all of the iterations of the iterator produced errors
+		if (sub_level == 0 && add_command) {
+		    g_all_commands.pop();
+		}
+		return false;
+	    }
+	    return true;
+	}
     }
     
     switch(op.type) {
@@ -903,6 +925,7 @@ static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
 		data_manager.export_functions(file_name, *arg_unary.obj.function_itr);
 		break;
 	    }
+	    g_all_commands.add_cmd_flag(CF_only_on_save);
 	}
 	goto exit;
 
@@ -922,7 +945,9 @@ static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
 	    goto exit;
 	}
 
-	g_all_commands.pop(); // remove the cmd for running the script
+	if (sub_level == 0 && add_command) {
+	    g_all_commands.pop(); // remove the cmd for running the script
+	}
 	run_command_file(data_manager, std::string(arg_binary.tkn.sv));
 	goto exit;
 	
@@ -932,18 +957,18 @@ static void handle_command_impl(Data_Manager &data_manager, Lexer& lexer)
 	    goto exit;
 	}
 	++lexer.tkn_idx;
+	{
+	    std::string file_name = DEFAULT_SAVE_FILE_NAME;
+	    if (lexer.tkn(1).type == tkn_string) {
+		++lexer.tkn_idx;
+		file_name = lexer.tkn().sv;
+	    }
 
-	arg_binary = expect_command_object(data_manager, lexer);
-	if (arg_binary.is_undefined())
-	    goto exit;
-
-	if (arg_binary.tkn.type != tkn_string) {
-	    lexer.parsing_error(arg_binary.tkn, "Expected the filename of the script.");
-	    goto exit;
+	    if (sub_level == 0 && add_command) {
+		g_all_commands.pop(); // remove the cmd for saving the script
+	    }
+	    save_command_file(file_name);
 	}
-
-	g_all_commands.pop(); // remove the cmd for saving the script
-	save_command_file(std::string(arg_binary.tkn.sv));
 	goto exit;
 
     case OP_zero:
@@ -1000,7 +1025,19 @@ exit:
     arg_unary.delete_iterator();
     arg_binary.delete_iterator();
     arg_tertiary.delete_iterator();
+
+    if (error_cnt != logger.error_cnt) {
+	if (sub_level == 0 && add_command) {
+	    g_all_commands.pop();
+	}
+	
+	object.delete_new_object(data_manager);
+	arg_unary.delete_new_object(data_manager);
+	arg_binary.delete_new_object(data_manager);
+	arg_tertiary.delete_new_object(data_manager);
+    }
     
     lexer.tkn_idx = 0;
     data_manager.update_references();
+    return error_cnt == logger.error_cnt;
 }

@@ -211,8 +211,3 @@ private:
 Plot_Data *get_new_default_x_for_plot_data(Plot_Data *plot_data);
 
 void run_command_file(std::string file_name);
-
-inline const char *help_messages[] {
-    "Drag and drop a 'comma seperated value' file. To import data.",
-    "",
-};

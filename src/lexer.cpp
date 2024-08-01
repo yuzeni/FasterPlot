@@ -418,5 +418,14 @@ void Lexer::log_token(Token &tkn) const
     else
 	color = UTILS_WHITE;
 
-    logger.log_info("%s%s " UTILS_END_COLOR, color.c_str(), std::string(tkn.ptr, tkn.size).c_str());
+    switch (tkn.type) {
+    case tkn_int:
+	logger.log_info("%s%d " UTILS_END_COLOR, color.c_str(), tkn.i);
+	break;
+    case tkn_real:
+	logger.log_info("%s%f " UTILS_END_COLOR, color.c_str(), tkn.d);
+	break;
+    default:
+	logger.log_info("%s%s " UTILS_END_COLOR, color.c_str(), std::string(tkn.ptr, tkn.size).c_str());
+    }
 }

@@ -153,7 +153,9 @@ void save_command_file(std::string file_name)
     if (out_file.is_open()) {
 
 	for (const auto& cmd : g_all_commands.get_commands()) {
-	    out_file << cmd << '\n';
+	    if (!check_flag(cmd.flags, CF_hidden)) {
+		out_file << cmd.cmd << '\n';
+	    }
 	}
 
 	out_file.close();

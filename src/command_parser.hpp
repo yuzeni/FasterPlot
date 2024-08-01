@@ -1,6 +1,9 @@
 #pragma once
 
+#include "data_manager.hpp"
 #include "lexer.hpp"
+
+struct Data_Manager;
 
 enum Object_Type
 {
@@ -33,6 +36,7 @@ struct Command_Object
 {
     Object_Type type = OT_undefined;
     Token tkn;
+    bool new_object = false;
     union {
 	Plot_Data* plot_data;
 	Plot_Data** plot_data_ptr;
@@ -50,6 +54,8 @@ struct Command_Object
 	case OT_function_itr: delete obj.function_itr; break;
 	}
     }
+    
+    void delete_new_object(Data_Manager& data_manager);
 
     bool is_undefined() { return type == OT_undefined; }
 };
@@ -137,7 +143,6 @@ struct Command_Operator
 
 // command structure:
 // object (to be changed or created) = operator (+,-,fit) object_A (unary) object_B (binary)
-struct Data_Manager;
-void handle_command(Data_Manager &data_manager, Lexer &lexer);
+bool handle_command(Data_Manager &data_manager, Lexer &lexer, int sub_level = 0, bool add_command = true);
 void handle_command_file(Data_Manager &data_manager, std::string file);
 void re_run_all_commands(Data_Manager& data_manager);
