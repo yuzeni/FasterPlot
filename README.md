@@ -12,7 +12,7 @@ Alternatively, prebuilt binaries can be found in the [releases](https://github.c
 - Run a script file containing commands, by dropping it on the window (there is also a `run script` command).
 
 #### Reverting commands
-- Use *ctrl + Z* to revert any command. Chain them to go back to the very start.\
+- Use *ctrl + Z* to revert any command. Chain them to go back to the very start.
 - Use *ctrl + Y* to revert a reverting of a command.
 When loading a new file, you can only go revert back up until this event.
 
@@ -28,7 +28,7 @@ When loading a new file, you can only go revert back up until this event.
 #### Commands
 
 The commands are explained mostly by examples.\
-Just start typing in the window and the command interface will appear.\
+Just start typing in the window and the command interface will appear.
 - Press backspace to delete the last character and hold *left-ctrl* to delete the whole word (token).
 - Press *enter* to execute the command.
 - Press *ESC* to exit the interface.
@@ -129,14 +129,14 @@ These expressions can also be used with the basic mathematical operators.
   - `data 0 = data 1`
   - `data new = data 1..3`
   - `function new = functin 8`
-  - `data new = data 3 + data 6` (requires data 3 x = data 6 x)
-  - `data 4 = data 3 - data 6` (requires data 3 x = data 6 x)
-  - `data new = data 3 * data 1..8` (requires data 3 x = data 1..8 x)
-  - `data new = data 3 / data 6` (requires data 3 x = data 6 x)
+  - `data new = data 3 + data 6` (requires **data 3 x** = **data 6 x**)
+  - `data 4 = data 3 - data 6` (requires **data 3 x** = **data 6 x**)
+  - `data new = data 3 * data 1..8` (requires **data 3 x** = **data 1..8 x**)
+  - `data new = data 3 / data 6` (requires **data 3 x** = **data 6 x**)
   - `data new = data 0..10 * data 0..10` (double iteration)
 
 - Operation assinging things. Supports the same operations as above.
-  - `data 0 += data 1..2`
+  - `data 0 += data 1,2`
 
 - Cacluating with single values.
   Currently it is not possible to assign to single values.
