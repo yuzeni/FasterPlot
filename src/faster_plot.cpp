@@ -34,7 +34,7 @@ int main()
 {
     SetTraceLogLevel(LOG_NONE);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_ALWAYS_RUN | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT);
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Flusssensor Tool");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Faster Plot");
     SetTargetFPS(TARGET_FPS);
     SetExitKey(KEY_NULL);
 

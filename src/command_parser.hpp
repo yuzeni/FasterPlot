@@ -83,6 +83,7 @@ enum Operator_Type
     OP_run,
     OP_save,
     OP_zero,
+    OP_help,
     OP_SIZE,
 };
 
@@ -108,6 +109,7 @@ inline const char *operator_type_name_table[OP_SIZE] {
     "run",
     "save",
     "zero",
+    "help",
 };
 
 inline int op_arg_cnt_table[OP_SIZE] {
@@ -127,6 +129,7 @@ inline int op_arg_cnt_table[OP_SIZE] {
     1,
     1,
     1,
+    0,
     0,
     0,
     0,

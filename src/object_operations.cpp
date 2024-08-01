@@ -72,11 +72,11 @@ bool smooth_plot_data(Plot_Data *plot_data, int window_size)
     return true;
 }
 
-void fit_sinusoid_plot_data(Plot_Data *plot_data, Function *function)
-{
-    function->type = FT_sinusoid;
-    function->func.sinusoid.fit_to_data(plot_data);
-}
+// void fit_sinusoid_plot_data(Plot_Data *plot_data, Function *function)
+// {
+//     function->type = FT_sinusoid;
+//     function->func.sinusoid.fit_to_data(plot_data);
+// }
 
 bool get_extrema_plot_data(Plot_Data *object_plot_data, Plot_Data *plot_data)
 {

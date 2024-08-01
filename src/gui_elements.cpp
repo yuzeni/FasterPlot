@@ -210,7 +210,7 @@ void Text_Input::draw()
 			    color = BLUE;
 			else if (tokens[tkn_idx].type == tkn_iterator)
 			    color = BROWN;
-			else if (tokens[tkn_idx].type >= tkn_fit && tokens[tkn_idx].type <= tkn_zero)
+			else if (tokens[tkn_idx].type >= tkn_fit && tokens[tkn_idx].type <= tkn_help)
 			    color = MAROON;
 			else
 			    color = BLACK;
@@ -227,3 +227,4 @@ void Text_Input::draw()
 	    DrawTextEx(*TEXT_INPUT_FONT, "|", draw_pos, TEXT_INPUT_FONT_SIZE, 0, BLACK);
     }
 }
+

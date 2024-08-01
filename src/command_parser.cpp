@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <iostream>
 
+#include "function_fitting.hpp"
 #include "global_vars.hpp"
 #include "utils.hpp"
 #include "lexer.hpp"
@@ -302,6 +303,9 @@ static Command_Operator get_command_operator(Token tkn)
     case tkn_zero:
 	op.type = OP_zero;
 	break;
+    case tkn_help:
+	op.type = OP_help;
+	break;
     }
     return op;
 }
@@ -386,8 +390,16 @@ void op_fit_assign(Lexer &lexer, Command_Object object, Command_Operator op, Com
 
     object.obj.function->fit_from_data = arg_binary.obj.plot_data;
 
+    if (lexer.tkn(1).type != tkn_int) {
+	lexer.parsing_error(lexer.tkn(1), "Expected an integer argument.");
+	return;
+    }
+    ++lexer.tkn_idx;
+
     if (arg_unary.tkn.type == tkn_sinusoid) {
-	fit_sinusoid_plot_data(arg_binary.obj.plot_data, object.obj.function);
+	object.obj.function->type = FT_sinusoid;
+	object.obj.function->fit_to_data(arg_binary.obj.plot_data, lexer.tkn(0).i);
+	// fit_sinusoid_plot_data(arg_binary.obj.plot_data, object.obj.function);
     }
     else {
 	lexer.parsing_error(arg_unary.tkn, "The argument '%s' is not supported by the operation '%s'",
@@ -973,6 +985,10 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 
     case OP_zero:
 	data_manager.zero_coord_sys_origin();
+	goto exit;
+	
+    case OP_help:
+	logger.log_help_message();
 	goto exit;
     }
 

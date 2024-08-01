@@ -45,6 +45,7 @@ static const char *token_name_table[tkn_SIZE - 256]{
     "run",
     "save",
     "zero",
+    "help",
     
     "+=",
     "-=",
@@ -101,6 +102,7 @@ Token_enum keyword_compare(const std::string_view sv)
     case cte_hash_c_str("run"): return tkn_run;
     case cte_hash_c_str("save"): return tkn_save;
     case cte_hash_c_str("zero"): return tkn_zero;
+    case cte_hash_c_str("help"): return tkn_help;
     default: return tkn_ident;
     }
 }
@@ -363,6 +365,7 @@ void Lexer::post_tokenization() {
 		    continue;
 		}
 		else {
+		    --tkn_idx; // it wasn't a comma, so it shouldn't be skipped
 		    break;
 		}
 	    }
@@ -379,6 +382,7 @@ void Lexer::post_tokenization() {
 		    continue;
 		}
 		else {
+		    --tkn_idx; // it wasn't a comma, so it shouldn't be skipped
 		    break;
 		}
 	    }
@@ -413,7 +417,7 @@ void Lexer::log_token(Token &tkn) const
 	color = UTILS_BLUE;
     else if (tkn.type == tkn_iterator)
 	color = UTILS_MAGENTA;
-    else if (tkn.type >= tkn_fit && tkn.type <= tkn_zero)
+    else if (tkn.type >= tkn_fit && tkn.type <= tkn_help)
 	color = UTILS_BRIGHT_RED;
     else
 	color = UTILS_WHITE;

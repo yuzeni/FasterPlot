@@ -6,6 +6,7 @@
 #include <cmath>
 #include <limits>
 #include <string>
+#include <vector>
 
 double Sinusoidal_Function::operator()(double x) const
 {
@@ -244,11 +245,8 @@ struct Matrix_3x3
     }
 };
 
-void Sinusoidal_Function::fit_to_data(Plot_Data* data)
+void Sinusoidal_Function::sinusoid_fit_approximation(Plot_Data* data)
 {
-    // if(!data->x)
-    // 	return;
-    
     int n = data->size();
     
     double* SS_n = new double[n];
@@ -357,3 +355,71 @@ void Sinusoidal_Function::fit_to_data(Plot_Data* data)
     b = abc.v[1];
     c = abc.v[2];
 }
+
+void Sinusoidal_Function::get_fit_init_values(Plot_Data *data)
+{
+    sinusoid_fit_approximation(data);
+}
+
+void Linear_Function::get_fit_init_values(Plot_Data *data)
+{
+    return;
+}
+
+static double squared_error(Plot_Data* data, Function& function)
+{
+    double squared_error = 0;
+    
+    if (data->x) {
+	for (size_t i = 0; i < data->size(); ++i) {
+	    squared_error += (function(data->x->y[i]) - data->y[i]) * (function(data->x->y[i]) - data->y[i]);
+	}
+    }
+    else {
+	for (size_t i = 0; i < data->size(); ++i) {
+	    squared_error += (function(i) - data->y[i]) * (function(i) - data->y[i]);
+	}
+    }
+    return squared_error / double(data->size());
+}
+
+static double squared_error_derivative(Plot_Data* data, double *param, Function& function)
+{
+    const double delta_x = 0.00001;
+    double squared_error_ya = squared_error(data, function);
+    *param += delta_x;
+    double squared_error_yb = squared_error(data, function);
+    *param -= delta_x; // this might not exactly revert param, not sure.
+    return (squared_error_yb - squared_error_ya) / delta_x;
+}
+
+void function_fit_iterative_naive(Plot_Data *data, Function &function, int iterations)
+{
+    logger.log_info("Error before: %f\n", squared_error(data, function));
+    const double learning_rate = 0.001;
+    // const int iterations = 10;
+    
+    const std::vector<double*>& param_list = function.get_param_list();
+    std::vector<double> derivatives(param_list.size(), 0);
+
+    for (int i = 0; i < iterations; ++i) {
+	for (size_t i = 0; i < param_list.size(); ++i) {
+	    derivatives[i] = squared_error_derivative(data, param_list[i], function);
+	}
+
+	// for (size_t i = 0; i < param_list.size(); ++i) {
+	//     *param_list[i] += derivatives[i] * learning_rate; // '-' because we want to approach zero
+	// }
+
+	// for sinusoid only
+	*param_list[0] -= derivatives[0] * 0.01;
+	*param_list[1] -= derivatives[1] * 0.01;
+	*param_list[2] -= derivatives[2] * 0.01;
+	*param_list[3] -= derivatives[3] * 0.000001;
+    }
+    logger.log_info("Error after: %f\n", squared_error(data, function));
+}
+
+
+
+

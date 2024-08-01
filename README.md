@@ -6,18 +6,16 @@ Alternatively, prebuilt binaries can be found in the [releases](https://github.c
  
 ## Documentation
 
-### Basics
-
+#### Basics
 - Load a file containing comma seperated values, by dropping it on the window.
 - Run a script file containing commands, by dropping it on the window (there is also a `run script` command).
 
 #### Reverting commands
 - Use *ctrl + Z* to revert any command. Chain them to go back to the very start.
-- Use *ctrl + Y* to revert a reverting of a command.
-When loading a new file, you can only go revert back up until this event.
+- Use *ctrl + Y* to revert, reverting a command.
+When loading a new file, you can only revert back up until this event.
 
 #### Movement
-
 - Pan the view, by holding the left mouse button and draging.
 - Move the coordinate system, by holding the right mouse button and dragging.
 - Zoom using the scroll wheel. The zoom is centered around the coordinat system.
@@ -26,7 +24,6 @@ When loading a new file, you can only go revert back up until this event.
 - Fit the window to the content by pressing space.
 
 #### Commands
-
 The commands are explained mostly by examples.\
 Just start typing in the window and the command interface will appear.
 - Press backspace to delete the last character and hold *left-ctrl* to delete the whole word (token).
@@ -124,7 +121,6 @@ The commands must be prefixed with `=` to print the result.
 These expressions can also be used with the basic mathematical operators.
 
 ##### basic mathematical operations
-
 - Assigning things.
   - `data 0 = data 1`
   - `data new = data 1..3`

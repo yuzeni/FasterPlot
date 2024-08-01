@@ -97,6 +97,7 @@ struct Logger {
 	}
     }
 
+    void log_help_message();
 
     std::vector<Log_Msg> log_msgs;
     size_t error_cnt = 0;

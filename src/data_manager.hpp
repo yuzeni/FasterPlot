@@ -123,6 +123,34 @@ struct Function
 	return std::numeric_limits<double>().quiet_NaN();
     }
 
+    void fit_to_data(Plot_Data* plot_data, int iterations)
+    {
+	switch(type) {
+	case FT_linear:   func.linear.get_fit_init_values(plot_data);
+	case FT_sinusoid: func.sinusoid.get_fit_init_values(plot_data);
+	}
+	
+	function_fit_iterative_naive(plot_data, *this, iterations);
+    }
+
+    // TODO: this is a terrible function, terrible.
+    std::vector<double*>& get_param_list()
+    {
+	param_list.clear();
+	switch(type) {
+	case FT_linear:
+	    param_list.push_back(&func.linear.a);
+	    param_list.push_back(&func.linear.b);
+	case FT_sinusoid:
+	    param_list.push_back(&func.sinusoid.a);
+	    param_list.push_back(&func.sinusoid.b);
+	    param_list.push_back(&func.sinusoid.c);
+	    param_list.push_back(&func.sinusoid.omega);
+	}
+	return param_list;
+	// TODO missing return value in error case
+    }
+
     void update_content_tree_element(size_t index);
     
     union {
@@ -130,6 +158,8 @@ struct Function
 	Linear_Function linear;
 	Sinusoidal_Function sinusoid;
     } func;
+
+    std::vector<double*> param_list;
 };
 
 struct Coordinate_System
