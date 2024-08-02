@@ -4,14 +4,12 @@
 
 #include <string>
 #include <vector>
-#include <limits>
 
 #include "function_fitting.hpp"
 #include "gui_elements.hpp"
 
 constexpr int graph_color_array_cnt = 20;
 inline Color graph_color_array[graph_color_array_cnt] = {
-    
     MAROON,
     GREEN,
     LIME,
@@ -20,7 +18,6 @@ inline Color graph_color_array[graph_color_array_cnt] = {
     BLUE,
     DARKBLUE,
     RED,
-    // YELLOW,
     GOLD,
     ORANGE,
     PINK,
@@ -83,8 +80,8 @@ struct Function
 	switch(type) {
 	case FT_linear:   return func.linear(x);
 	case FT_sinusoid: return func.sinusoid(x);
+	default: 	  return 0;
 	}
-	return 0;
     }
 
     std::string get_string_value() const
@@ -92,8 +89,8 @@ struct Function
 	switch(type) {
 	case FT_linear:   return func.linear.get_string_value();
 	case FT_sinusoid: return func.sinusoid.get_string_value();
+	default: 	  return "undefined function";
 	}
-	return "undefined function";
     }
     
     std::string get_string_no_value() const
@@ -101,8 +98,8 @@ struct Function
 	switch(type) {
 	case FT_linear:   return func.linear.get_string_no_value();
 	case FT_sinusoid: return func.sinusoid.get_string_no_value();
+	default:          return "undefined function";
 	}
-	return "undefined function";
     }
 
     bool is_defined() const
@@ -110,17 +107,17 @@ struct Function
 	switch(type) {
 	case FT_linear:   return func.linear.is_defined();
 	case FT_sinusoid: return func.sinusoid.is_defined();
+	default:          return false;
 	}
-	return false;
     }
 
-    double get_parameter(std::string_view name) const
+    double* get_parameter_ref(std::string_view name)
     {
 	switch(type) {
-	case FT_linear:   return func.linear.get_parameter(name);
-	case FT_sinusoid: return func.sinusoid.get_parameter(name);
+	case FT_linear:   return func.linear.get_parameter_ref(name);
+	case FT_sinusoid: return func.sinusoid.get_parameter_ref(name);
+	default:          return nullptr;
 	}
-	return std::numeric_limits<double>().quiet_NaN();
     }
 
     void fit_to_data(Plot_Data* plot_data, int iterations)
@@ -216,16 +213,18 @@ struct Data_Manager
     void update_references();
     void export_plot_data(std::string file_name, std::vector<Plot_Data*>& plot_data);
     void export_functions(std::string file_name, std::vector<Function*>& functions);
+    void revert_command();
+    void revert_reverting();
     
 private:
 
-    // Plot_Data default_x;
     int graph_color_array_idx = 0;
     Content_Tree content_tree;
     const int key_board_lock_id;
 
     std::vector<Plot_Data*> original_plot_data;
     std::vector<Function*> original_functions;
+    int original_graph_color_array_idx = 0;
 
     void copy_data_to_data(std::vector<Plot_Data*>& from_plot_data, std::vector<Plot_Data*>& to_plot_data,
 			   std::vector<Function*>& from_functions, std::vector<Function*>& to_functions);

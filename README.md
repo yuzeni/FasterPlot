@@ -2,7 +2,7 @@
 ## Building on Windows
 
 Run the `build.bat` script from the Microsoft Visual Studio _"x64 Native Tools Command Prompt"_ or from any command prompt with the `vcvars64.bat` environment.\
-Alternatively, prebuilt binaries can be found in the [releases](https://github.com/yuzeni/Flusssensor/releases).
+Alternatively, prebuilt binaries can be found in the [releases](https://github.com/yuzeni/FasterPlot/releases).
  
 ## Documentation
 
@@ -11,8 +11,8 @@ Alternatively, prebuilt binaries can be found in the [releases](https://github.c
 - Run a script file containing commands, by dropping it on the window (there is also a `run script` command).
 
 #### Reverting commands
-- Use *ctrl + Z* to revert any command.
-- Use *ctrl + Y* to revert, reverting a command.
+- Use *ctrl + left arrow key* to revert any command.
+- Use *ctrl + right arrow key* to revert, reverting a command.
 
 When loading a new file, you can only revert back up until this event.
 

@@ -13,8 +13,8 @@ struct Sinusoidal_Function
     double operator()(double x) const;
     std::string get_string_value() const;
     std::string get_string_no_value() const;
-    double get_parameter(std::string_view name) const;
     void get_fit_init_values(Plot_Data* data);
+    double* get_parameter_ref(std::string_view name);
     double* get_parameter_ref(int idx);
     double get_fit_parameter_change_rate(int idx);
     
@@ -32,8 +32,8 @@ struct Linear_Function
     double operator()(double x) const;
     std::string get_string_value() const;
     std::string get_string_no_value() const;
-    double get_parameter(std::string_view name) const;
     void get_fit_init_values(Plot_Data* data);
+    double* get_parameter_ref(std::string_view name);
     double* get_parameter_ref(int idx);
     double get_fit_parameter_change_rate(int idx);
 };

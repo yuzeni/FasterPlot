@@ -174,3 +174,4 @@ inline uint64_t get_uuid()
     ++id;
     return id;
 }
+

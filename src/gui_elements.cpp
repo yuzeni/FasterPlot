@@ -111,6 +111,8 @@ void Text_Input::update(Data_Manager& data_manager)
     int key = GetCharPressed();
 
     std::string& input = lexer.get_input();
+
+    
     
     if ((key >= 33) && (key <= 126))
 	input_active = true;
@@ -129,7 +131,8 @@ void Text_Input::update(Data_Manager& data_manager)
 
 	bool new_chars = false;
 	
-	while (key > 0) {
+	while (key > 0)
+	{
 	    if ((key >= 32) && (key <= 126)) {
 		input += (char)key;
 	    }

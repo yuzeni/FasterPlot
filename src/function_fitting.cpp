@@ -10,32 +10,17 @@
 
 double Sinusoidal_Function::operator()(double x) const
 {
-    // return a + b * std::cos(omega * x) + c * std::sin(omega * x);
     return a + b * std::sin(c * x + d);
 }
 
 std::string Sinusoidal_Function::get_string_value() const
 {
-    // return std::to_string(a) + " + " + std::to_string(b) + " * cos(" + std::to_string(omega) + " * x) + " + std::to_string(c) + " * sin(" + std::to_string(omega) + " * x)";
     return std::to_string(a) + " + " + std::to_string(b) + " * sin(" + std::to_string(c) + " * x + " + std::to_string(d) + ")";
 }
 
 std::string Sinusoidal_Function::get_string_no_value() const
 {
-    // return "a + b * cos(omega * x) + c * sin(omega * x)";
     return "a + b * sin(c * x + d)";
-}
-
-double Sinusoidal_Function::get_parameter(std::string_view name) const
-{
-    switch(hash_string_view(name)) {
-    case cte_hash_c_str("a"): return a;
-    case cte_hash_c_str("b"): return b;
-    case cte_hash_c_str("c"): return c;
-    // case cte_hash_c_str("omega"): return omega;
-    case cte_hash_c_str("d"): return d;
-    }
-    return std::numeric_limits<double>::quiet_NaN();
 }
 
 double Sinusoidal_Function::get_fit_parameter_change_rate(int idx)
@@ -49,6 +34,16 @@ double Sinusoidal_Function::get_fit_parameter_change_rate(int idx)
     }
 }
 
+double* Sinusoidal_Function::get_parameter_ref(std::string_view name)
+{
+    switch(hash_string_view(name)) {
+    case cte_hash_c_str("a"): return &a;
+    case cte_hash_c_str("b"): return &b;
+    case cte_hash_c_str("c"): return &c;
+    case cte_hash_c_str("d"): return &d;
+    }
+    return nullptr;
+}
 
 double* Sinusoidal_Function::get_parameter_ref(int idx)
 {
@@ -76,15 +71,6 @@ std::string Linear_Function::get_string_no_value() const
     return "a * x + b";
 }
 
-double Linear_Function::get_parameter(std::string_view name) const
-{
-    switch(hash_string_view(name)) {
-    case cte_hash_c_str("a"): return a;
-    case cte_hash_c_str("b"): return b;
-    }
-    return std::numeric_limits<double>::quiet_NaN();
-}
-
 double Linear_Function::get_fit_parameter_change_rate(int idx)
 {
     switch(idx) {
@@ -92,6 +78,15 @@ double Linear_Function::get_fit_parameter_change_rate(int idx)
     case 1: return 1;
     default: return 0;
     }
+}
+
+double* Linear_Function::get_parameter_ref(std::string_view name)
+{
+    switch(hash_string_view(name)) {
+    case cte_hash_c_str("a"): return &a;
+    case cte_hash_c_str("b"): return &b;
+    }
+    return nullptr;
 }
 
 double* Linear_Function::get_parameter_ref(int idx)
@@ -102,6 +97,8 @@ double* Linear_Function::get_parameter_ref(int idx)
     default: return nullptr;
     }
 }
+
+// Sinusoidal Fit Algorithm: https://stackoverflow.com/questions/77350332/sine-curve-to-fit-data-cloud-using-c
 
 static void get_SS_n__with_x(double* SS_n, int n, Plot_Data* data)
 {
@@ -126,7 +123,6 @@ static void get_SS_n__without_x(double* SS_n, int n, Plot_Data* data)
 	SS_n[i] = SS_i;
     }
 }
-
 
 struct Vector_4
 {

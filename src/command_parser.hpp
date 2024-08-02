@@ -16,6 +16,7 @@ enum Object_Type
     OT_function_itr,
     OT_plot_data_ptr_itr,
     OT_value,
+    OT_value_ptr,
     OT_SIZE, 
 };
 
@@ -28,6 +29,8 @@ inline const char *object_type_name_table[OT_SIZE] {
     "plot_data_itr",
     "function_itr",
     "plot_data_ptr_itr",
+    "val",
+    "val_ptr",
 };
 
 struct Plot_Data;
@@ -45,6 +48,7 @@ struct Command_Object
 	std::vector<Plot_Data**>* plot_data_ptr_itr;
 	std::vector<Function*>* function_itr;
 	double val;
+	double* val_ptr;
     } obj;
 
     void delete_iterator() {

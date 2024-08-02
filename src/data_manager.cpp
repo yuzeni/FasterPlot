@@ -256,6 +256,7 @@ void Data_Manager::load_external_plot_data(const std::string& file_name)
     }
     fit_camera_to_plot();
 
+    original_graph_color_array_idx = graph_color_array_idx;
     copy_data_to_data(plot_data, original_plot_data, functions, original_functions);
 
     logger.log_info("Loaded file '%s'.", file_name.c_str());
@@ -310,14 +311,15 @@ void Data_Manager::update()
 	}
 	
 	if (IsKeyDown(KEY_LEFT_CONTROL)) {
-	    if ((IsKeyPressed(KEY_Z) && g_all_commands.decr_command_idx()) ||
-		(IsKeyPressed(KEY_Y) && g_all_commands.incr_command_idx()))
+	    if ((IsKeyPressed(KEY_LEFT) && g_all_commands.decr_command_idx()) ||
+		(IsKeyPressed(KEY_RIGHT) && g_all_commands.incr_command_idx()))
 	    {
-		if(IsKeyPressed(KEY_Z))
+		if(IsKeyPressed(KEY_LEFT))
 		    logger.log_info("Revert command.\n");
-		if(IsKeyPressed(KEY_Y))
+		if(IsKeyPressed(KEY_RIGHT))
 		    logger.log_info("Revert reverting.\n");
 
+		graph_color_array_idx = original_graph_color_array_idx;
 		copy_data_to_data(original_plot_data, plot_data, original_functions, functions);
 		re_run_all_commands(*this);
 	    }
@@ -352,9 +354,6 @@ void Data_Manager::zero_coord_sys_origin()
 
 void Data_Manager::fit_camera_to_plot(bool go_to_zero)
 {
-    // if (plot_data.empty() && functions.empty())
-    // 	return;
-
     camera.coord_sys.origin = {double(plot_padding.x), double(GetScreenHeight() - plot_padding.y)};
     
     double max_x = -HUGE_VAL, max_y = -HUGE_VAL, min_x = HUGE_VAL, min_y = HUGE_VAL;
