@@ -10,7 +10,7 @@
 
 constexpr int SCREEN_WIDTH = 800;
 constexpr int SCREEN_HEIGHT = 600;
-constexpr int TARGET_FPS = 60;
+constexpr int TARGET_FPS = 120;
      
 static bool handle_dropped_files(Data_Manager& data_manager) {
     if (IsFileDropped()) {

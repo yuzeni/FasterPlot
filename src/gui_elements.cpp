@@ -98,11 +98,6 @@ void Content_Tree::delete_element(Content_Tree_Element *elem)
     }
 }
 
-void Text_Input::tokenize_input()
-{
-    lexer.tokenize();
-}
-
 bool Text_Input::keyboard_access()
 {
     return g_keyboard_lock == 0 || g_keyboard_lock == keyboard_lock_id;
@@ -143,7 +138,7 @@ void Text_Input::update(Data_Manager& data_manager)
 	}
 
 	if (new_chars) {
-	    tokenize_input();
+	    lexer.tokenize();
 	    new_chars = false;
 	}
 	
@@ -155,7 +150,7 @@ void Text_Input::update(Data_Manager& data_manager)
 		else {
 		    input.pop_back();
 		}
-		tokenize_input();
+		lexer.tokenize();
 	    }
 	    else {
 		input_active = false;

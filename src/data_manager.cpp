@@ -352,8 +352,8 @@ void Data_Manager::zero_coord_sys_origin()
 
 void Data_Manager::fit_camera_to_plot(bool go_to_zero)
 {
-    if (plot_data.empty() && functions.empty())
-	return;
+    // if (plot_data.empty() && functions.empty())
+    // 	return;
 
     camera.coord_sys.origin = {double(plot_padding.x), double(GetScreenHeight() - plot_padding.y)};
     
@@ -399,7 +399,7 @@ void Data_Manager::fit_camera_to_plot(bool go_to_zero)
 	}
     }
 
-    if (max_x != -HUGE_VAL && min_x != HUGE_VAL) {
+    if (max_x != -HUGE_VAL && min_x != HUGE_VAL && max_x != min_x) {
 	camera.coord_sys.basis_x = { double(GetScreenWidth() - plot_padding.x * 2) / (max_x - min_x), 0 };
 	camera.origin_offset.x = -min_x;
     }
@@ -408,7 +408,7 @@ void Data_Manager::fit_camera_to_plot(bool go_to_zero)
 	camera.origin_offset.x = 0;
     }
     
-    if (max_y != -HUGE_VAL && min_y != HUGE_VAL) {
+    if (max_y != -HUGE_VAL && min_y != HUGE_VAL &&  max_y != min_y) {
 	camera.coord_sys.basis_y = { 0, -double(GetScreenHeight() - plot_padding.y * 2) / (max_y - min_y)};
 	camera.origin_offset.y = -min_y;
     }

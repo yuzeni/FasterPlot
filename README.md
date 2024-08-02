@@ -46,7 +46,7 @@ Resets to origin to (0,0), while fitting the window to the content.
 - `zero`
 
 ##### `fit`
-Fits a **function** to **data**.
+Fits a **function** to **data**. Currently there is only the `sinusoid` option.
 - `function 0 = fit sinusoid data 3 0` (with 0 refine iterations)
 - `function new = fit sinusoid data 3 10` (with 10 refine iterations)
 - `function new "my fit of data 0" = fit sinusoid data 0 0,100,1000` (with 0,10,1000 refine iterations)
@@ -85,12 +85,12 @@ Interpolates the **data** linearly. An integer argument specifies how many times
 - `interp data 0 2` (quadruples the points of data 0)
 
 ##### setting the X axis
-Any **data** is interpreted as just a set of Y values which are plotted by their index, by default.
+Any **data** is interpreted as a set of Y values which are by default plotted by their index.
 However **data** can reference other **data** as its X axis.
 - `data 1..4 x = data 0`
 
 ##### `extrema`
-Get the local extrema of **data**. They must be saved in another data object. Usually applied after smoothing the data.
+Get the local extrema of **data**. They must be saved in another data object. Usually applied after smoothing the **data**.
 - `data 10 = extrema data 3`
 - `data new = extrema data 1,3,5`
 
@@ -101,7 +101,7 @@ Get the local extrema of **data**. They must be saved in another data object. Us
 Delete specific **data** points.
 - `delete points 100..1000 data 9`
 
-##### exporting data and funcitons
+##### exporting data and functions
 Exports **data** as comma seperated .txt files or **functions** as their variable and value form.\
 They will be located in the *exports* folder.
 - `export data 1,2,3` (default file name *export*)
@@ -113,12 +113,12 @@ Saves .script files to the scripts folder.
 - `save script` (default file name *save*)
 - `save script "my script"` (specified file name)
 
-Keep in mind that all commands are cleared from the command list, omitting them from being saved, if a new file is loaded.
-This is because a script should not depend on any external files.\
-Similarly if a command file is loaded, all its commands will be copied to the command list, not the laoding of the script.
+Keep in mind that all commands are cleared from the command list, omitting them from being saved, if a new file is loaded, 
+because a script should not depend on any external files.\
+Similarly if a command file is loaded, all its commands will be copied to the command list, not the command of loading the script.
 
 ##### running command scripts
-- `run "my script"`
+- `run script "my script"`
 
 Dropping the script onto the window is also supported.\
 The script must have the file extension *.script*.
@@ -133,7 +133,8 @@ The commands must be prefixed with `=` to print the result.
 These expressions can also be used with the basic mathematical operators.
 
 ##### basic mathematical operations
-- Assigning things.
+- Assigning things.\
+  Currently it is not possible to assign to single values, like `y points 9 data 2`.
   - `data 0 = data 1`
   - `data new = data 1..3`
   - `function new = functin 8`
@@ -146,7 +147,5 @@ These expressions can also be used with the basic mathematical operators.
 - Operation assinging things. Supports the same operations as above.
   - `data 0 += data 1,2`
 
-- Cacluating with single values.\
-  Currently it is not possible to assign to single values.
+- Cacluating with single values. Also supports the same operations.\
   - `= function 3 d - function 4 d`
-
