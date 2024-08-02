@@ -12,7 +12,7 @@ Alternatively, prebuilt binaries can be found in the [releases](https://github.c
 
 #### Reverting commands
 - Use *ctrl + Z* to revert any command.
-- Use *ctrl + Y* to revert, reverting a command.\
+- Use *ctrl + Y* to revert, reverting a command.
 
 When loading a new file, you can only revert back up until this event.
 
@@ -29,7 +29,7 @@ The commands are explained mostly by examples.\
 Just start typing in the window and the command input will appear.
 - Press *backspace* to delete the last character, holding *left-ctrl* deletes the whole word (token).
 - Press *enter* to execute the command.
-- Press *ESC* to exit the command input.\
+- Press *ESC* to exit the command input.
 
 The commands as well as infos and errors are written to the shell.
 
@@ -57,7 +57,7 @@ Prints this documentation to the shell.
 
 ##### `hide`
 Hides objects..
-- `hide function 5..10`\
+- `hide function 5..10`
 
 ..and specific visualizations of objects.
 - `hide points data 1` (disables point visualization)
@@ -67,7 +67,7 @@ Hides objects..
 ##### `show`
 If the object is hidden, `show` will make it visible.\
 If the object is already visible, `show` will fit the window to the object.
-- `show data 5`\
+- `show data 5`
 
 Also used to show specific visualizations of object.
 - `show points data 1` (enables point visualization)
@@ -96,7 +96,7 @@ Get the local extrema of **data**. They must be saved in another data object. Us
 
 ##### deleting things
 - `delete data 0..2`
-- `delete funciton 4`\
+- `delete funciton 4`
 
 Delete specific **data** points.
 - `delete points 100..1000 data 9`
@@ -111,14 +111,15 @@ They will be located in the *exports* folder.
 ##### saving all executed commands to a script
 Saves .script files to the scripts folder.
 - `save script` (default file name *save*)
-- `save script "my script"` (specified file name)\
+- `save script "my script"` (specified file name)
 
 Keep in mind that all commands are cleared from the command list, omitting them from being saved, if a new file is loaded.
 This is because a script should not depend on any external files.\
 Similarly if a command file is loaded, all its commands will be copied to the command list, not the laoding of the script.
 
 ##### running command scripts
-- `run "my script"`\
+- `run "my script"`
+
 Dropping the script onto the window is also supported.\
 The script must have the file extension *.script*.
 
@@ -127,7 +128,7 @@ The commands must be prefixed with `=` to print the result.
 - `= x points 20 data 7` (prints the x value of the 20th points of **data 7**)
 - `= y points 0..4 data 7` (prints the y value of points 0..4 of **data 7**)
 - `= function 3 4525.67` (prints the result of **function 3** at X `4525.67`)
-- `= function 5 b` (prints the parameter **b** of **function 5**)\
+- `= function 5 b` (prints the parameter **b** of **function 5**)
 
 These expressions can also be used with the basic mathematical operators.
 
