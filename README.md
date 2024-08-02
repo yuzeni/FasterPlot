@@ -11,24 +11,24 @@ Alternatively, prebuilt binaries can be found in the [releases](https://github.c
 - Run a script file containing commands, by dropping it on the window (there is also a `run script` command).
 
 #### Reverting commands
-- Use *ctrl + Z* to revert any command. Chain them to go back to the very start.
-- Use *ctrl + Y* to revert, reverting a command.
+- Use *ctrl + Z* to revert any command.
+- Use *ctrl + Y* to revert, reverting a command.\
 When loading a new file, you can only revert back up until this event.
 
 #### Movement
-- Pan the view, by holding the left mouse button and draging.
-- Move the coordinate system, by holding the right mouse button and dragging.
-- Zoom using the scroll wheel. The zoom is centered around the coordinat system.
+- Pan the view, by holding the *left mouse button* and draging.
+- Move the coordinate system, by holding the *right mouse button* and dragging. Or by clicking somewhere with the *right mouse button*.
+- Zoom using the *scroll wheel*. The zoom is centered around the coordinat system.
 - Zoom the X-axis by scrolling while pressing *left-shift*.
 - Zoom the Y-axis by scrolling while pressing *left-ctrl*.
-- Fit the window to the content by pressing space.
+- Fit the window to the content by pressing *space*.
 
 #### Commands
 The commands are explained mostly by examples.\
-Just start typing in the window and the command interface will appear.
-- Press backspace to delete the last character and hold *left-ctrl* to delete the whole word (token).
+Just start typing in the window and the command input will appear.
+- Press *backspace* to delete the last character, holding *left-ctrl* deletes the whole word (token).
 - Press *enter* to execute the command.
-- Press *ESC* to exit the interface.
+- Press *ESC* to exit the command input.\
 The commands as well as infos and errors are written to the shell.
 
 ##### iterators
@@ -54,17 +54,17 @@ Prints this documentation to the shell.
 - `help`
 
 ##### `hide`
-Hides objects...
-- `hide function 5..10`
-and specific visualizations of objects.
+Hides objects..
+- `hide function 5..10`\
+..and specific visualizations of objects.
 - `hide points data 1` (disables point visualization)
 - `hide index data 1` (disables index visualization)
 - `hide lines data 1` (disables line visualization)
 
 ##### `show`
-If the object is hidden, `show` will make it visible.
-If the object is visible, `show` will fit the window to the object.
-- `show data 5`
+If the object is hidden, `show` will make it visible.\
+If the object is already visible, `show` will fit the window to the object.
+- `show data 5`\
 Also used to show specific visualizations of object.
 - `show points data 1` (enables point visualization)
 - `show index data 1` (enables index visualization)
@@ -92,12 +92,12 @@ Get the local extrema of **data**. They must be saved in another data object. Us
 
 ##### deleting things
 - `delete data 0..2`
-- `delete funciton 4`
+- `delete funciton 4`\
 Delete specific **data** points.
 - `delete points 100..1000 data 9`
 
 ##### exporting data and funcitons
-Exports data as comma seperated .txt files or functions as their variable and value form.\
+Exports **data** as comma seperated .txt files or **functions** as their variable and value form.\
 They will be located in the *exports* folder.
 - `export data 1,2,3` (default file name *export*)
 - `export data 1,2,3 "my_data"` (specified file name)
@@ -105,14 +105,14 @@ They will be located in the *exports* folder.
 
 ##### saving all executed commands to a script
 Saves .script files to the scripts folder.
-- `save script"` (default file name *save*)
-- `save script "my script"` (specified file name)
+- `save script` (default file name *save*)
+- `save script "my script"` (specified file name)\
 Keep in mind that all commands are cleared from the command list, omitting them from being saved, if a new file is loaded.
-This is because a script should not depend on any external files.
+This is because a script should not depend on any external files.\
 Similarly if a command file is loaded, all its commands will be copied to the command list, not the laoding of the script.
 
 ##### running command scripts
-- `run "my script"`
+- `run "my script"`\
 Dropping the script onto the window is also supported.\
 The script must have the file extension *.script*.
 
@@ -121,7 +121,7 @@ The commands must be prefixed with `=` to print the result.
 - `= x points 20 data 7` (prints the x value of the 20th points of **data 7**)
 - `= y points 0..4 data 7` (prints the y value of points 0..4 of **data 7**)
 - `= function 3 4525.67` (prints the result of **function 3** at X `4525.67`)
-- `= function 5 b` (prints the parameter **b** of **function 5**)
+- `= function 5 b` (prints the parameter **b** of **function 5**)\
 These expressions can also be used with the basic mathematical operators.
 
 ##### basic mathematical operations
@@ -138,7 +138,7 @@ These expressions can also be used with the basic mathematical operators.
 - Operation assinging things. Supports the same operations as above.
   - `data 0 += data 1,2`
 
-- Cacluating with single values.
+- Cacluating with single values.\
   Currently it is not possible to assign to single values.
   - `= function 3 d - function 4 d`
 
