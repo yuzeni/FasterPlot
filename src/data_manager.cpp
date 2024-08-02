@@ -311,12 +311,12 @@ void Data_Manager::update()
 	}
 	
 	if (IsKeyDown(KEY_LEFT_CONTROL)) {
-	    if ((IsKeyPressed(KEY_LEFT) && g_all_commands.decr_command_idx()) ||
-		(IsKeyPressed(KEY_RIGHT) && g_all_commands.incr_command_idx()))
+	    if (((IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_COMMA)) && g_all_commands.decr_command_idx()) ||
+		((IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_PERIOD)) && g_all_commands.incr_command_idx()))
 	    {
-		if(IsKeyPressed(KEY_LEFT))
+		if(IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_COMMA))
 		    logger.log_info("Revert command.\n");
-		if(IsKeyPressed(KEY_RIGHT))
+		if(IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_PERIOD))
 		    logger.log_info("Revert reverting.\n");
 
 		graph_color_array_idx = original_graph_color_array_idx;

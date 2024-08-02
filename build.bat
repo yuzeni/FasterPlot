@@ -8,4 +8,3 @@ cl /O2 /EHsc /std:c++20 /I..\raylib50 ..\src\faster_plot.cpp ..\src\utils.cpp ..
 xcopy /e /i /y "..\resources" "resources"
 .\faster_plot.exe
 popd
-

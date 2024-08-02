@@ -15,8 +15,8 @@ void Logger::log_help_message()
 - Run a script file containing commands, by dropping it on the window (there is also a " UTILS_BRIGHT_BLACK "run script" UTILS_END_COLOR " command).\n\
 \n\
 " UTILS_RED "Reverting commands " UTILS_END_COLOR "\n\
-- Use ctrl + left arrow key to revert any command.\n\
-- Use ctrl + right arrow key to revert, reverting a command.\n\
+- Use ctrl + left arrow key or ctrl + ',' to revert any command.\n\
+- Use ctrl + right arrow key or ctrl + '.' to revert, reverting a command.\n\
 \n\
 When loading a new file, you can only revert back up until this event.\n\
 \n\

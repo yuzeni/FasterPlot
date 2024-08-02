@@ -11,8 +11,8 @@ Alternatively, prebuilt binaries can be found in the [releases](https://github.c
 - Run a script file containing commands, by dropping it on the window (there is also a `run script` command).
 
 #### Reverting commands
-- Use *ctrl + left arrow key* to revert any command.
-- Use *ctrl + right arrow key* to revert, reverting a command.
+- Use *ctrl + left arrow key* or *ctrl + ','* to revert any command.
+- Use *ctrl + right arrow key* or *ctrl + '.'* to revert, reverting a command.
 
 When loading a new file, you can only revert back up until this event.
 

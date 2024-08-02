@@ -175,3 +175,16 @@ inline uint64_t get_uuid()
     return id;
 }
 
+
+template<char check_key>
+bool is_key_char_pressed()
+{
+    int key;
+    key = GetCharPressed();
+    while (key) {
+	if (key == check_key)
+	    return true;
+	key = GetCharPressed();
+    }
+    return false;
+}
