@@ -10,17 +10,20 @@
 
 double Sinusoidal_Function::operator()(double x) const
 {
-    return a + b * std::cos(omega * x) + c * std::sin(omega * x);
+    // return a + b * std::cos(omega * x) + c * std::sin(omega * x);
+    return a + b * std::sin(c * x + d);
 }
 
 std::string Sinusoidal_Function::get_string_value() const
 {
-    return std::to_string(a) + " + " + std::to_string(b) + " * cos(" + std::to_string(omega) + " * x) + " + std::to_string(c) + " * sin(" + std::to_string(omega) + " * x)";
+    // return std::to_string(a) + " + " + std::to_string(b) + " * cos(" + std::to_string(omega) + " * x) + " + std::to_string(c) + " * sin(" + std::to_string(omega) + " * x)";
+    return std::to_string(a) + " + " + std::to_string(b) + " * sin(" + std::to_string(c) + " * x + " + std::to_string(d) + ")";
 }
 
 std::string Sinusoidal_Function::get_string_no_value() const
 {
-    return "a + b * cos(omega * x) + c * sin(omega * x)";
+    // return "a + b * cos(omega * x) + c * sin(omega * x)";
+    return "a + b * sin(c * x + d)";
 }
 
 double Sinusoidal_Function::get_parameter(std::string_view name) const
@@ -29,9 +32,33 @@ double Sinusoidal_Function::get_parameter(std::string_view name) const
     case cte_hash_c_str("a"): return a;
     case cte_hash_c_str("b"): return b;
     case cte_hash_c_str("c"): return c;
-    case cte_hash_c_str("omega"): return omega;
+    // case cte_hash_c_str("omega"): return omega;
+    case cte_hash_c_str("d"): return d;
     }
     return std::numeric_limits<double>::quiet_NaN();
+}
+
+double Sinusoidal_Function::get_fit_parameter_change_rate(int idx)
+{
+    switch(idx) {
+    case 0: return 1;
+    case 1: return 1;
+    case 2: return 0.00001;
+    case 3: return 1;
+    default: return 0;
+    }
+}
+
+
+double* Sinusoidal_Function::get_parameter_ref(int idx)
+{
+    switch(idx) {
+    case 0: return &a;
+    case 1: return &b;
+    case 2: return &c;
+    case 3: return &d;
+    default: return nullptr;
+    }
 }
 
 double Linear_Function::operator()(double x) const
@@ -56,6 +83,24 @@ double Linear_Function::get_parameter(std::string_view name) const
     case cte_hash_c_str("b"): return b;
     }
     return std::numeric_limits<double>::quiet_NaN();
+}
+
+double Linear_Function::get_fit_parameter_change_rate(int idx)
+{
+    switch(idx) {
+    case 0: return 1;
+    case 1: return 1;
+    default: return 0;
+    }
+}
+
+double* Linear_Function::get_parameter_ref(int idx)
+{
+    switch(idx) {
+    case 0: return &a;
+    case 1: return &b;
+    default: return nullptr;
+    }
 }
 
 static void get_SS_n__with_x(double* SS_n, int n, Plot_Data* data)
@@ -308,7 +353,7 @@ void Sinusoidal_Function::sinusoid_fit_approximation(Plot_Data* data)
     
     Vector_4 c_vec = mat4.get_inverse().mul_vector_4(vec4);
 
-    omega = std::sqrt(-c_vec.v[0]);
+    double omega = std::sqrt(-c_vec.v[0]);
 
     double sin_omega_xn = 0;
     double cos_omega_xn = 0;
@@ -351,9 +396,11 @@ void Sinusoidal_Function::sinusoid_fit_approximation(Plot_Data* data)
     
     Vector_3 abc = mat3.get_inverse().mul_vector_3(vec3);
 
+
     a = abc.v[0];
-    b = abc.v[1];
-    c = abc.v[2];
+    b = std::sqrt(abc.v[1] * abc.v[1] + abc.v[2] * abc.v[2]);
+    c = omega;
+    d = std::atan(abc.v[1] / abc.v[2]);
 }
 
 void Sinusoidal_Function::get_fit_init_values(Plot_Data *data)
@@ -385,7 +432,7 @@ static double squared_error(Plot_Data* data, Function& function)
 
 static double squared_error_derivative(Plot_Data* data, double *param, Function& function)
 {
-    const double delta_x = 0.00001;
+    const double delta_x = (0.001 / (data->size()));
     double squared_error_ya = squared_error(data, function);
     *param += delta_x;
     double squared_error_yb = squared_error(data, function);
@@ -395,31 +442,34 @@ static double squared_error_derivative(Plot_Data* data, double *param, Function&
 
 void function_fit_iterative_naive(Plot_Data *data, Function &function, int iterations)
 {
-    logger.log_info("Error before: %f\n", squared_error(data, function));
-    const double learning_rate = 0.001;
-    // const int iterations = 10;
+    logger.log_info("Error before iterative optimization: %f\n", squared_error(data, function));
+    const double learning_rate = 1 / double(data->size());
     
-    const std::vector<double*>& param_list = function.get_param_list();
+    std::vector<double*> param_list;
+    std::vector<double> param_change_rate;
+    int param_idx = 0;
+    double* param_ref = function.get_param_ref(param_idx);
+    
+    while(param_ref)
+    {
+	param_list.push_back(param_ref);
+	param_change_rate.push_back(function.get_fit_parameter_change_rate(param_idx));
+	
+	param_idx++;
+	param_ref = function.get_param_ref(param_idx);
+    }
+    
     std::vector<double> derivatives(param_list.size(), 0);
 
-    for (int i = 0; i < iterations; ++i) {
+    for (int i = 0; i < iterations; ++i)
+    {
 	for (size_t i = 0; i < param_list.size(); ++i) {
 	    derivatives[i] = squared_error_derivative(data, param_list[i], function);
 	}
 
-	// for (size_t i = 0; i < param_list.size(); ++i) {
-	//     *param_list[i] += derivatives[i] * learning_rate; // '-' because we want to approach zero
-	// }
-
-	// for sinusoid only
-	*param_list[0] -= derivatives[0] * 0.01;
-	*param_list[1] -= derivatives[1] * 0.01;
-	*param_list[2] -= derivatives[2] * 0.01;
-	*param_list[3] -= derivatives[3] * 0.000001;
+	for (size_t i = 0; i < param_list.size(); ++i) {
+	    *param_list[i] -= derivatives[i] * learning_rate * param_change_rate[i];
+	}
     }
-    logger.log_info("Error after: %f\n", squared_error(data, function));
+    logger.log_info("Error after iterative optimization: %f\n", squared_error(data, function));
 }
-
-
-
-

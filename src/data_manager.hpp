@@ -133,22 +133,22 @@ struct Function
 	function_fit_iterative_naive(plot_data, *this, iterations);
     }
 
-    // TODO: this is a terrible function, terrible.
-    std::vector<double*>& get_param_list()
+    double get_fit_parameter_change_rate(int idx)
     {
-	param_list.clear();
 	switch(type) {
-	case FT_linear:
-	    param_list.push_back(&func.linear.a);
-	    param_list.push_back(&func.linear.b);
-	case FT_sinusoid:
-	    param_list.push_back(&func.sinusoid.a);
-	    param_list.push_back(&func.sinusoid.b);
-	    param_list.push_back(&func.sinusoid.c);
-	    param_list.push_back(&func.sinusoid.omega);
+	case FT_linear:   return func.linear.get_fit_parameter_change_rate(idx);
+	case FT_sinusoid: return func.sinusoid.get_fit_parameter_change_rate(idx);
+	default: return 0;
 	}
-	return param_list;
-	// TODO missing return value in error case
+    }
+
+    double* get_param_ref(int idx)
+    {
+	switch(type) {
+	case FT_linear:   return func.linear.get_parameter_ref(idx);
+	case FT_sinusoid: return func.sinusoid.get_parameter_ref(idx);
+	default: return nullptr;
+	}
     }
 
     void update_content_tree_element(size_t index);
