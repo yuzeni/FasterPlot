@@ -45,6 +45,17 @@ double* Sinusoidal_Function::get_parameter_ref(std::string_view name)
     return nullptr;
 }
 
+int Sinusoidal_Function::get_parameter_idx(std::string_view name)
+{
+    switch(hash_string_view(name)) {
+    case cte_hash_c_str("a"): return 0;
+    case cte_hash_c_str("b"): return 1;
+    case cte_hash_c_str("c"): return 2;
+    case cte_hash_c_str("d"): return 3;
+    }
+    return -1;
+}
+
 double* Sinusoidal_Function::get_parameter_ref(int idx)
 {
     switch(idx) {
@@ -87,6 +98,15 @@ double* Linear_Function::get_parameter_ref(std::string_view name)
     case cte_hash_c_str("b"): return &b;
     }
     return nullptr;
+}
+
+int Linear_Function::get_parameter_idx(std::string_view name)
+{
+    switch(hash_string_view(name)) {
+    case cte_hash_c_str("a"): return 0;
+    case cte_hash_c_str("b"): return 1;
+    }
+    return -1;
 }
 
 double* Linear_Function::get_parameter_ref(int idx)
@@ -436,24 +456,10 @@ static double squared_error_derivative(Plot_Data* data, double *param, Function&
     return (squared_error_yb - squared_error_ya) / delta_x;
 }
 
-void function_fit_iterative_naive(Plot_Data *data, Function &function, int iterations)
+void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vector<double*>& param_list, std::vector<double>& param_change_rate, int iterations)
 {
     logger.log_info("Error before iterative optimization: %f\n", squared_error(data, function));
-    const double learning_rate = 1 / double(data->size());
-    
-    std::vector<double*> param_list;
-    std::vector<double> param_change_rate;
-    int param_idx = 0;
-    double* param_ref = function.get_param_ref(param_idx);
-    
-    while(param_ref)
-    {
-	param_list.push_back(param_ref);
-	param_change_rate.push_back(function.get_fit_parameter_change_rate(param_idx));
-	
-	param_idx++;
-	param_ref = function.get_param_ref(param_idx);
-    }
+    const double learning_rate = 0.1;
     
     std::vector<double> derivatives(param_list.size(), 0);
 

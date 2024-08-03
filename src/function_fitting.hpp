@@ -15,6 +15,7 @@ struct Sinusoidal_Function
     std::string get_string_no_value() const;
     void get_fit_init_values(Plot_Data* data);
     double* get_parameter_ref(std::string_view name);
+    int get_parameter_idx(std::string_view name);
     double* get_parameter_ref(int idx);
     double get_fit_parameter_change_rate(int idx);
     
@@ -34,6 +35,7 @@ struct Linear_Function
     std::string get_string_no_value() const;
     void get_fit_init_values(Plot_Data* data);
     double* get_parameter_ref(std::string_view name);
+    int get_parameter_idx(std::string_view name);
     double* get_parameter_ref(int idx);
     double get_fit_parameter_change_rate(int idx);
 };
@@ -49,4 +51,4 @@ enum Function_Type
 };
 
 struct Function;
-void function_fit_iterative_naive(Plot_Data* plot_data, Function &function, int iterations);
+void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vector<double*>& param_list, std::vector<double>& param_change_rate, int iterations);

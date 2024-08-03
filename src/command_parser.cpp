@@ -3,7 +3,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 #include <limits>
 
 #include "function_fitting.hpp"
@@ -431,10 +430,13 @@ void op_fit_assign(Lexer &lexer, Command_Object object, Command_Operator op, Com
     }
     ++lexer.tkn_idx;
 
+    std::vector<double*> param_list;
+    std::vector<double> param_change_rate;
+
     if (arg_unary.tkn.type == tkn_sinusoid) {
 	object.obj.function->type = FT_sinusoid;
-	object.obj.function->fit_to_data(arg_binary.obj.plot_data, lexer.tkn(0).i);
-	// fit_sinusoid_plot_data(arg_binary.obj.plot_data, object.obj.function);
+	object.obj.function->get_all_param_ref_and_fit_change_rate(param_list, param_change_rate);
+	object.obj.function->fit_to_data(arg_binary.obj.plot_data, lexer.tkn(0).i, param_list, param_change_rate);
     }
     else {
 	lexer.parsing_error(arg_unary.tkn, "The argument '%s' is not supported by the operation '%s'",
@@ -864,8 +866,11 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 			    arg_tertiary.obj.plot_data->y.erase(arg_tertiary.obj.plot_data->y.begin() + (*arg_point_itr)[0],
 								arg_tertiary.obj.plot_data->y.begin() + arg_point_itr->back() + 1);
 			    if (arg_tertiary.obj.plot_data->x) {
-				arg_tertiary.obj.plot_data->x->y.erase(arg_tertiary.obj.plot_data->x->y.begin() + (*arg_point_itr)[0],
-								       arg_tertiary.obj.plot_data->x->y.begin() + arg_point_itr->back() + 1);
+				
+				Plot_Data* new_x = data_manager.new_plot_data();
+				new_x->y = arg_tertiary.obj.plot_data->x->y;
+			        new_x->y.erase(new_x->y.begin() + (*arg_point_itr)[0], new_x->y.begin() + arg_point_itr->back() + 1);
+				arg_tertiary.obj.plot_data->x = new_x;
 			    }
 			}
 			else {
@@ -876,8 +881,15 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 			for (auto pd : *(arg_tertiary.obj.plot_data_itr)) {
 			    if ((*arg_point_itr)[0] >= 0 && arg_point_itr->back() < int64_t(pd->size())) {
 				pd->y.erase(pd->y.begin() + (*arg_point_itr)[0], pd->y.begin() + arg_point_itr->back() + 1);
+				
 				if (pd->x) {
-				    pd->x->y.erase(pd->x->y.begin() + (*arg_point_itr)[0], pd->x->y.begin() + arg_point_itr->back() + 1);
+				    // theses cannot the recognized as new objects, but should be fine, since we are also recording errors.
+				    Plot_Data* new_x = data_manager.new_plot_data();
+				    new_x->y = pd->x->y;
+				    new_x->y.erase(new_x->y.begin() + (*arg_point_itr)[0], new_x->y.begin() + arg_point_itr->back() + 1);
+				    pd->x = new_x;
+				    
+				    // pd->x->y.erase(pd->x->y.begin() + (*arg_point_itr)[0], pd->x->y.begin() + arg_point_itr->back() + 1);
 				}
 			    }
 			    else {
@@ -903,8 +915,14 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 		    case OT_plot_data:
 			if (arg_binary.tkn.i < int64_t(arg_tertiary.obj.plot_data->size())) {
 			    arg_tertiary.obj.plot_data->y.erase(arg_tertiary.obj.plot_data->y.begin() + arg_binary.tkn.i);
-			    if (arg_tertiary.obj.plot_data->x)
-				arg_tertiary.obj.plot_data->x->y.erase(arg_tertiary.obj.plot_data->x->y.begin() + arg_binary.tkn.i);
+			    
+			    if (arg_tertiary.obj.plot_data->x) {
+				Plot_Data* new_x = data_manager.new_plot_data();
+				new_x->y = arg_tertiary.obj.plot_data->x->y;
+			        new_x->y.erase(new_x->y.begin() + arg_binary.tkn.i);
+				arg_tertiary.obj.plot_data->x = new_x;
+				// arg_tertiary.obj.plot_data->x->y.erase(arg_tertiary.obj.plot_data->x->y.begin() + arg_binary.tkn.i);
+			    }
 			}
 			else {
 			    lexer.parsing_error(arg_binary.tkn, "Out of bound.");
@@ -914,8 +932,14 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 			for (auto pd : *(arg_tertiary.obj.plot_data_itr)) {
 			    if (arg_binary.tkn.i < int64_t(pd->size())) {
 				pd->y.erase(pd->y.begin() + arg_binary.tkn.i);
-				if (pd->x)
-				    pd->x->y.erase(pd->x->y.begin() + arg_binary.tkn.i);
+				
+				if (pd->x) {
+				    Plot_Data* new_x = data_manager.new_plot_data();
+				    new_x->y = pd->x->y;
+				    new_x->y.erase(new_x->y.begin() + arg_binary.tkn.i);
+				    pd->x = new_x;
+				    // pd->x->y.erase(pd->x->y.begin() + arg_binary.tkn.i);
+				}
 			    }
 			    else {
 				lexer.parsing_error(arg_binary.tkn, "Out of bound for data '%d'", pd->index);
@@ -970,6 +994,8 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	    case OT_function_itr:
 		data_manager.export_functions(file_name, *arg_unary.obj.function_itr);
 		break;
+	    default:
+		lexer.parsing_error(arg_unary.tkn, "Can't export this object.");
 	    }
 	    g_all_commands.add_cmd_flag(CF_only_on_save);
 	}
@@ -1023,6 +1049,57 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	
     case OP_help:
 	logger.log_help_message();
+	goto exit;
+	
+    case OP_fit:
+	arg_unary = expect_command_object(data_manager, lexer);
+	if (arg_unary.is_undefined())
+	    goto exit;
+	
+	if (arg_unary.type != OT_function) {
+	    lexer.parsing_error(object.tkn, "Expected function, but got '%s'.", object_type_name_table[object.type]);
+	    goto exit;
+	}
+
+	arg_binary = expect_command_object(data_manager, lexer);
+	if (arg_binary.is_undefined())
+	    goto exit;
+
+	if (arg_binary.type != OT_plot_data) {
+	    lexer.parsing_error(arg_binary.tkn, "The argument '%s' is not supported by the operation '%s'",
+				object_type_name_table[arg_binary.type], operator_type_name_table[op.type]);
+	    goto exit;
+	}
+	
+	arg_unary.obj.function->fit_from_data = arg_binary.obj.plot_data;
+
+	if (lexer.tkn(1).type != tkn_int) {
+	    lexer.parsing_error(lexer.tkn(1), "Expected an integer argument.");
+	    goto exit;
+	}
+	++lexer.tkn_idx;
+	int iterations = lexer.tkn(0).i;
+
+	std::vector<double*> param_list;
+	std::vector<double> param_change_rate;
+
+	while(lexer.tkn(1).type == tkn_ident)
+	{
+	    ++lexer.tkn_idx;
+	    int param_idx = arg_unary.obj.function->get_parameter_idx(lexer.tkn(0).sv);
+	    if (param_idx < 0) {
+		lexer.parsing_error(lexer.tkn(0), "This parameter does not exist.");
+	    }
+	    
+	    param_list.push_back(arg_unary.obj.function->get_parameter_ref(param_idx));
+	    param_change_rate.push_back(arg_unary.obj.function->get_fit_parameter_change_rate(param_idx));
+	}
+
+	if (param_list.empty()) {
+	    arg_unary.obj.function->get_all_param_ref_and_fit_change_rate(param_list, param_change_rate);
+	}
+
+	arg_unary.obj.function->fit_to_data(arg_binary.obj.plot_data, iterations, param_list, param_change_rate, false);
 	goto exit;
     }
 

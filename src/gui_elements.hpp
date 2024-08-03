@@ -60,9 +60,9 @@ struct Data_Manager;
 struct Text_Input
 {
     Text_Input() : keyboard_lock_id(get_uuid()) {
-	input_active = true;
-	lexer.get_input() = "type help in here";
-	lexer.tokenize();
+	// input_active = true;
+	// lexer.get_input() = "type help in here";
+	// lexer.tokenize();
     }
     void draw();
     void update(Data_Manager& data_manger);
@@ -71,7 +71,7 @@ private:
 
     bool keyboard_access();
     
-    bool input_active = false;
+    bool input_active = true;
     Lexer lexer;
     bool show_cursor = true;
     const int keyboard_lock_id;

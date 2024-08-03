@@ -120,14 +120,25 @@ struct Function
 	}
     }
 
-    void fit_to_data(Plot_Data* plot_data, int iterations)
+    int get_parameter_idx(std::string_view name)
     {
 	switch(type) {
-	case FT_linear:   func.linear.get_fit_init_values(plot_data);
-	case FT_sinusoid: func.sinusoid.get_fit_init_values(plot_data);
+	case FT_linear:   return func.linear.get_parameter_idx(name);
+	case FT_sinusoid: return func.sinusoid.get_parameter_idx(name);
+	default:          return -1;
+	}
+    }
+
+    void fit_to_data(Plot_Data* plot_data, int iterations, std::vector<double*>& param_list, std::vector<double>& param_change_rate, bool warm_start = true)
+    {
+	if (warm_start) {
+	    switch(type) {
+	    case FT_linear:   func.linear.get_fit_init_values(plot_data);
+	    case FT_sinusoid: func.sinusoid.get_fit_init_values(plot_data);
+	    }
 	}
 	
-	function_fit_iterative_naive(plot_data, *this, iterations);
+	function_fit_iterative_naive(plot_data, *this, param_list, param_change_rate, iterations);
     }
 
     double get_fit_parameter_change_rate(int idx)
@@ -139,12 +150,26 @@ struct Function
 	}
     }
 
-    double* get_param_ref(int idx)
+    double* get_parameter_ref(int idx)
     {
 	switch(type) {
 	case FT_linear:   return func.linear.get_parameter_ref(idx);
 	case FT_sinusoid: return func.sinusoid.get_parameter_ref(idx);
 	default: return nullptr;
+	}
+    }
+
+    void get_all_param_ref_and_fit_change_rate(std::vector<double*>& param_list, std::vector<double>& param_change_rate)
+    {
+	int param_idx = 0;
+	double* param_ref = get_parameter_ref(param_idx);
+	while(param_ref)
+	{
+	    param_list.push_back(param_ref);
+	    param_change_rate.push_back(get_fit_parameter_change_rate(param_idx));
+	
+	    param_idx++;
+	    param_ref = get_parameter_ref(param_idx);
 	}
     }
 

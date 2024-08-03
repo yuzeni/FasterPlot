@@ -108,17 +108,39 @@ void Text_Input::update(Data_Manager& data_manager)
     if(!keyboard_access())
 	return;
     
-    int key = GetCharPressed();
-
     std::string& input = lexer.get_input();
 
-    
-    
-    if ((key >= 33) && (key <= 126))
+    int key = GetCharPressed();
+    if ((key >= 33) && (key <= 126)) {
 	input_active = true;
+    }
+
+    static int prev_cmd_idx = g_all_commands.get_index();
     
-    if (IsKeyPressed(KEY_ENTER))
+    if (IsKeyPressed(KEY_UP)) {
+	if (prev_cmd_idx >= 0) {
+	    input_active = true;
+	    input = g_all_commands.get_commands()[prev_cmd_idx].cmd;
+	    lexer.tokenize();
+	}
+	if (prev_cmd_idx > 0) {
+	    --prev_cmd_idx;
+	}
+    }
+    else if (IsKeyPressed(KEY_DOWN)) {
+	if (prev_cmd_idx < g_all_commands.get_index()) {
+	    ++prev_cmd_idx;
+	}
+	if (prev_cmd_idx >= 0) {
+	    input_active = true;
+	    input = g_all_commands.get_commands()[prev_cmd_idx].cmd;
+	    lexer.tokenize();
+	}
+    }
+     
+    if (IsKeyPressed(KEY_ENTER)) {
 	input_active = false;
+    }
 
     if (IsKeyPressed(KEY_ESCAPE)) {
 	input_active = false;
@@ -162,6 +184,7 @@ void Text_Input::update(Data_Manager& data_manager)
     }
     else if (!input.empty()) {
 	handle_command(data_manager, lexer);
+	prev_cmd_idx = g_all_commands.get_index();
 	lexer = Lexer{};
     }
 }
