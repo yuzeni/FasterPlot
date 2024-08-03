@@ -1,12 +1,15 @@
 #include "function_fitting.hpp"
 
-#include "data_manager.hpp"
-#include "utils.hpp"
-
 #include <cmath>
-#include <limits>
 #include <string>
 #include <vector>
+#include <iostream>
+
+#include "app_loop.hpp"
+#include "data_manager.hpp"
+#include "global_vars.hpp"
+#include "raylib.h"
+#include "utils.hpp"
 
 double Sinusoidal_Function::operator()(double x) const
 {
@@ -26,10 +29,10 @@ std::string Sinusoidal_Function::get_string_no_value() const
 double Sinusoidal_Function::get_fit_parameter_change_rate(int idx)
 {
     switch(idx) {
-    case 0: return 1;
-    case 1: return 1;
-    case 2: return 0.00001;
-    case 3: return 1;
+    case 0: return 100;
+    case 1: return 100;
+    case 2: return 0.001;
+    case 3: return 100;
     default: return 0;
     }
 }
@@ -85,8 +88,8 @@ std::string Linear_Function::get_string_no_value() const
 double Linear_Function::get_fit_parameter_change_rate(int idx)
 {
     switch(idx) {
-    case 0: return 1;
-    case 1: return 1;
+    case 0: return 0.00001;
+    case 1: return 100;
     default: return 0;
     }
 }
@@ -426,7 +429,33 @@ void Sinusoidal_Function::get_fit_init_values(Plot_Data *data)
 
 void Linear_Function::get_fit_init_values(Plot_Data *data)
 {
-    return;
+    // double average = 0;
+    // for (size_t i = 0; i < data->size(); ++i) {
+    // 	average += data->y[i];
+    // }
+    // average /= data->size();
+ 
+    double Ax, Ay, Bx, By;
+
+    if (data->size() < 2) {
+	logger.log_error("Can't fit to data, because it contains less than 2 values");
+	return;
+    }
+    
+    if (data->x) {
+	Ax = data->x->y[0];
+	Bx = data->x->y[data->size() - 1];
+    }
+    else {
+	Ax = 0;
+	Bx = data->size() - 1;
+    }
+
+    Ay = data->y[0];
+    By = data->y[data->size() - 1];
+
+    a = (Ay - By) / (Ax - Bx);
+    b = By - a * Bx;
 }
 
 static double squared_error(Plot_Data* data, Function& function)
@@ -450,21 +479,30 @@ static double squared_error_derivative(Plot_Data* data, double *param, Function&
 {
     const double delta_x = (0.001 / (data->size()));
     double squared_error_ya = squared_error(data, function);
+    double orig_param = *param;
     *param += delta_x;
     double squared_error_yb = squared_error(data, function);
-    *param -= delta_x; // this might not exactly revert param, not sure.
+    *param = orig_param;
     return (squared_error_yb - squared_error_ya) / delta_x;
 }
 
 void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vector<double*>& param_list, std::vector<double>& param_change_rate, int iterations)
 {
     logger.log_info("Error before iterative optimization: %f\n", squared_error(data, function));
-    const double learning_rate = 0.1;
+    const double learning_rate = 0.001;
     
     std::vector<double> derivatives(param_list.size(), 0);
 
+    double time_begin = GetTime();
+    // double time_begin_begin = time_begin;
+
     for (int i = 0; i < iterations; ++i)
     {
+	if (GetTime() - time_begin > 1.0 / (double(TARGET_FPS) * 0.33)) {
+	    app_loop();
+	    time_begin = GetTime();
+	}
+	
 	for (size_t i = 0; i < param_list.size(); ++i) {
 	    derivatives[i] = squared_error_derivative(data, param_list[i], function);
 	}
@@ -474,4 +512,5 @@ void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vect
 	}
     }
     logger.log_info("Error after iterative optimization: %f\n", squared_error(data, function));
+    // logger.log_info("Elapsed time: %f s\n", GetTime() - time_begin_begin);
 }

@@ -102,15 +102,6 @@ struct Function
 	}
     }
 
-    bool is_defined() const
-    {
-	switch(type) {
-	case FT_linear:   return func.linear.is_defined();
-	case FT_sinusoid: return func.sinusoid.is_defined();
-	default:          return false;
-	}
-    }
-
     double* get_parameter_ref(std::string_view name)
     {
 	switch(type) {
@@ -133,8 +124,12 @@ struct Function
     {
 	if (warm_start) {
 	    switch(type) {
-	    case FT_linear:   func.linear.get_fit_init_values(plot_data);
-	    case FT_sinusoid: func.sinusoid.get_fit_init_values(plot_data);
+	    case FT_linear:
+		func.linear.get_fit_init_values(plot_data);
+		break;
+	    case FT_sinusoid:
+		func.sinusoid.get_fit_init_values(plot_data);
+		break;
 	    }
 	}
 	
@@ -170,6 +165,21 @@ struct Function
 	
 	    param_idx++;
 	    param_ref = get_parameter_ref(param_idx);
+	}
+    }
+
+    void init()
+    {
+	switch(type) {
+	case FT_linear:
+	    func.linear = Linear_Function{};
+	    break;
+	case FT_sinusoid:
+	    func.sinusoid = Sinusoidal_Function{};
+	    break;
+	default:
+	    func.undefined = Undefined_Function{};
+	    break;
 	}
     }
 
@@ -265,3 +275,5 @@ private:
 Plot_Data *get_new_default_x_for_plot_data(Plot_Data *plot_data);
 
 void run_command_file(std::string file_name);
+
+inline Data_Manager data_manager; // I love singletons

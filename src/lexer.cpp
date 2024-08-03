@@ -26,6 +26,7 @@ static const char *token_name_table[tkn_SIZE - 256]{
 
     "fit",
     "sinusoid",
+    "linear",
     "data",
     "function",
     "new",
@@ -83,6 +84,7 @@ Token_enum keyword_compare(const std::string_view sv)
     case cte_hash_c_str("false"): return tkn_false;
     case cte_hash_c_str("fit"): return tkn_fit;
     case cte_hash_c_str("sinusoid"): return tkn_sinusoid;
+    case cte_hash_c_str("linear"): return tkn_linear;
     case cte_hash_c_str("data"): return tkn_data;
     case cte_hash_c_str("function"): return tkn_function;
     case cte_hash_c_str("new"): return tkn_new;

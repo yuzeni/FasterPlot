@@ -29,6 +29,7 @@ enum Token_enum : uint32_t {
     /* keywords */
     tkn_fit,
     tkn_sinusoid,
+    tkn_linear,
     tkn_data,
     tkn_function,
     tkn_new,

@@ -4,12 +4,11 @@
 
 #include "utils.hpp"
 
-// y = a + b * cos(omega * x) + c sin(omega * x)
+// y = a + b * sin(c * x + d)
 struct Sinusoidal_Function
 {
-    double a = 0, b = 0, c = 0, d = 0;
+    double a = 0, b = 1, c = 1, d = 0;
 
-    bool is_defined() const { return a || b || c || d; }
     double operator()(double x) const;
     std::string get_string_value() const;
     std::string get_string_no_value() const;
@@ -27,9 +26,8 @@ private:
 // y = a * x + b
 struct Linear_Function
 {
-    double a = 1, b = 2;
+    double a = 1, b = 0;
 
-    bool is_defined() const { return a || b; }
     double operator()(double x) const;
     std::string get_string_value() const;
     std::string get_string_no_value() const;

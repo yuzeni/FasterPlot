@@ -1,4 +1,4 @@
-
+ 
 #include "command_parser.hpp"
 
 #include <cstddef>
@@ -109,6 +109,7 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
 	if (!expect_next_token(lexer))
 	    return {};
 	object.type = OT_function;
+	
 	switch(lexer.tkn().type) {
 	case tkn_new:
 	    data_manager.new_function();
@@ -165,6 +166,7 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
     case tkn_true:
     case tkn_false:
     case tkn_sinusoid:
+    case tkn_linear:
     case tkn_points:
     case tkn_lines:
     case tkn_index:
@@ -314,12 +316,11 @@ void op_binary_assign(Lexer& lexer, Command_Object object, Command_Operator op, 
 {
     switch(object.type) {
     case OT_plot_data:
-	object.obj.plot_data->y.clear();
-    
+	
 	if (arg_unary.type == OT_function && arg_binary.type == OT_function) {
 	    for (size_t ix = 0; ix < object.obj.plot_data->size(); ++ix) {
 		double x = object.obj.plot_data->x ? object.obj.plot_data->x->y[ix] : ix;
-		object.obj.plot_data->y.push_back(op_fun(arg_unary.obj.function->operator()(x), arg_binary.obj.function->operator()(x)));
+		object.obj.plot_data->y[ix] = op_fun(arg_unary.obj.function->operator()(x), arg_binary.obj.function->operator()(x));
 	    }
 	}
 	else if (arg_unary.type == OT_plot_data && arg_binary.type == OT_plot_data) {
@@ -327,7 +328,10 @@ void op_binary_assign(Lexer& lexer, Command_Object object, Command_Operator op, 
 		lexer.parsing_error(op.tkn, "The two data do not share the same X. Therefore they can't be combined.");
 		return;
 	    }
-	    for (size_t ix = 0; ix < std::min(arg_unary.obj.plot_data->size(), arg_binary.obj.plot_data->size()); ++ix) {
+
+	    size_t new_obj_size = std::min(arg_unary.obj.plot_data->size(), arg_binary.obj.plot_data->size());
+	    object.obj.plot_data->y.resize(new_obj_size, 0);
+	    for (size_t ix = 0; ix < new_obj_size; ++ix) {
 		object.obj.plot_data->y.push_back(op_fun(arg_unary.obj.plot_data->y[ix], arg_binary.obj.plot_data->y[ix]));
 	    }
 	    object.obj.plot_data->x = arg_unary.obj.plot_data->x;
@@ -335,16 +339,23 @@ void op_binary_assign(Lexer& lexer, Command_Object object, Command_Operator op, 
 	else {
 	    Plot_Data* plot_data;
 	    Function* function;
-	    if (arg_unary.type == OT_plot_data) {
+	    if (arg_unary.type == OT_plot_data && arg_binary.type == OT_function) {
 		plot_data = arg_unary.obj.plot_data;
 		function = arg_binary.obj.function;
 	    }
-	    else {
+	    else if (arg_unary.type == OT_function && arg_binary.type == OT_plot_data) {
 		plot_data = arg_binary.obj.plot_data;
 		function = arg_unary.obj.function;
 	    }
-	    for (size_t ix = 0; ix < plot_data->size(); ++ix)
-		object.obj.plot_data->y.push_back(op_fun(plot_data->y[ix], function->operator()(plot_data->x ? plot_data->x->y[ix] : ix)));
+	    else {
+		lexer.parsing_error(object.tkn, "Can't assign the result of this expression to this object.");
+		return;
+	    }
+
+	    object.obj.plot_data->y.resize(plot_data->size(), 0);
+	    for (size_t ix = 0; ix < plot_data->size(); ++ix) {
+		object.obj.plot_data->y[ix] = op_fun(plot_data->y[ix], function->operator()(plot_data->x ? plot_data->x->y[ix] : ix));
+	    }
 	    object.obj.plot_data->x = plot_data->x;
 	}	
 	break;
@@ -384,28 +395,51 @@ void op_binary_assign(Lexer& lexer, Command_Object object, Command_Operator op, 
 
 }
 
-void op_unary_assign(Command_Object object, Command_Object arg_unary)
+void op_unary_assign(Lexer& lexer, Command_Object object, Command_Object arg_unary)
 {
-    if (object.type == OT_plot_data && arg_unary.type == OT_plot_data) {
-	object.obj.plot_data->x = arg_unary.obj.plot_data->x;
-	object.obj.plot_data->y = arg_unary.obj.plot_data->y;
+    switch(object.type) {
+    case OT_plot_data:
+	if (arg_unary.type == OT_plot_data) {
+	    object.obj.plot_data->x = arg_unary.obj.plot_data->x;
+	    object.obj.plot_data->y = arg_unary.obj.plot_data->y;
+	    return;
+	}
+	break;
+    case OT_function:
+	if (arg_unary.type == OT_function) {
+	    object.obj.function->type = arg_unary.obj.function->type;
+	    object.obj.function->func = arg_unary.obj.function->func;
+	    return;
+	}
+	else if (arg_unary.type == OT_token) {
+	    switch (arg_unary.tkn.type) {
+	    case tkn_sinusoid:
+		object.obj.function->type = FT_sinusoid;
+		object.obj.function->init();
+		return;
+	    case tkn_linear:
+		object.obj.function->type = FT_linear;
+		object.obj.function->init();
+		return;
+	    }
+	}
+    case OT_plot_data_ptr:
+	if (arg_unary.type == OT_plot_data) {
+	    *object.obj.plot_data_ptr = arg_unary.obj.plot_data;
+	    return;
+	}
+    case OT_value_ptr:
+	switch (arg_unary.type) {
+	case OT_value_ptr:
+	    *object.obj.val_ptr = *arg_unary.obj.val_ptr;
+	    return;
+	case OT_value:
+	    *object.obj.val_ptr = arg_unary.obj.val;
+	    return;
+	}
     }
-    else if (object.type == OT_function && arg_unary.type == OT_function) {
-	object.obj.function->type = arg_unary.obj.function->type;
-	object.obj.function->func = arg_unary.obj.function->func;
-    }
-    else if (object.type == OT_plot_data_ptr && arg_unary.type == OT_plot_data) {
-	*object.obj.plot_data_ptr = arg_unary.obj.plot_data;
-    }
-    else if (object.type == OT_value_ptr && arg_unary.type == OT_value_ptr) {
-	*object.obj.val_ptr = *arg_unary.obj.val_ptr;
-    }
-    else if (object.type == OT_value_ptr && arg_unary.type == OT_value) {
-	*object.obj.val_ptr = arg_unary.obj.val;
-    }
-    else {
-	logger.log_error("Plots and functions cannot be assigned to each other.");
-    }
+
+    lexer.parsing_error(arg_unary.tkn, "Cannot assign this object.");
 }
 
 void op_fit_assign(Lexer &lexer, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary)
@@ -430,19 +464,23 @@ void op_fit_assign(Lexer &lexer, Command_Object object, Command_Operator op, Com
     }
     ++lexer.tkn_idx;
 
-    std::vector<double*> param_list;
-    std::vector<double> param_change_rate;
-
-    if (arg_unary.tkn.type == tkn_sinusoid) {
+    switch(arg_unary.tkn.type) {
+    case tkn_sinusoid:
 	object.obj.function->type = FT_sinusoid;
-	object.obj.function->get_all_param_ref_and_fit_change_rate(param_list, param_change_rate);
-	object.obj.function->fit_to_data(arg_binary.obj.plot_data, lexer.tkn(0).i, param_list, param_change_rate);
-    }
-    else {
+	break;
+    case tkn_linear:
+	object.obj.function->type = FT_linear;
+	break;
+    default:
 	lexer.parsing_error(arg_unary.tkn, "The argument '%s' is not supported by the operation '%s'",
 			    get_token_name_str(arg_unary.tkn.type).c_str(), operator_type_name_table[op.type]);
 	return;
     }
+
+    std::vector<double*> param_list;
+    std::vector<double> param_change_rate;
+    object.obj.function->get_all_param_ref_and_fit_change_rate(param_list, param_change_rate);
+    object.obj.function->fit_to_data(arg_binary.obj.plot_data, lexer.tkn(0).i, param_list, param_change_rate);
 }
 
 void op_extrema_assign(Lexer &lexer, Data_Manager &data_manager, Command_Object object, Command_Operator op, Command_Object arg_unary)
@@ -493,7 +531,7 @@ void execute_assign_operation(Lexer &lexer, Data_Manager &data_manager, Command_
 	op_binary_assign(lexer, object, op, object, arg_unary, div_op);
 	break;
     case OP_assign:
-	op_unary_assign(object, arg_unary);
+	op_unary_assign(lexer, object, arg_unary);
 	break;
     case OP_fit:
 	op_fit_assign(lexer, object, op, arg_unary, arg_binary);
@@ -558,11 +596,16 @@ static double execute_operation_value(Command_Operator op, Command_Object arg_un
 
 static void print_unary(Command_Object arg_unary, Lexer& lexer)
 {
-    if (arg_unary.type == OT_value) {
+    switch(arg_unary.type) {
+    case OT_value:
 	logger.log_info("%f\n", arg_unary.obj.val);
-    }
-    else {
-	lexer.parsing_error(arg_unary.tkn, "Expected a number.");
+	break;
+    case OT_value_ptr:
+	logger.log_info("%f\n", *arg_unary.obj.val_ptr);
+	break;
+    default:
+	lexer.parsing_error(arg_unary.tkn, "Expected a value.");
+	break;
     }
 }
 

@@ -9,6 +9,10 @@
 
 #include "lexer.hpp"
 
+struct Data_Manager;
+
+bool handle_dropped_files(Data_Manager& data_manager);
+
 struct Content_Tree_Element_String {
 
     Content_Tree_Element_String(std::string str) : str(str) {}
@@ -54,8 +58,6 @@ private:
 private:
     void draw_element(Vec2<int> &draw_pos, Content_Tree_Element* elem, int font_size, Font font);
 };
-
-struct Data_Manager;
 
 struct Text_Input
 {

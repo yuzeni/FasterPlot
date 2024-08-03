@@ -58,10 +58,7 @@ void Function::update_content_tree_element(size_t index)
     content_element.name_color = info.color;
     content_element.content.clear();
     
-    if (!is_defined())
-	content_element.content.push_back({"f(x) = " + get_string_no_value()});
-    else
-	content_element.content.push_back({"f(x) = " + get_string_value()});
+    content_element.content.push_back({"f(x) = " + get_string_value()});
     
     if (info.visible)
 	content_element.content.push_back({"visible"});
@@ -131,7 +128,7 @@ void Data_Manager::draw_functions()
 {
     for(const auto& func : functions)
     {
-	if (!func->is_defined() || !func->info.visible)
+	if (!func->info.visible)
 	    continue;
 	
 	for(size_t ix = 0; ix < size_t(GetScreenWidth()); ix += 1)
@@ -154,7 +151,7 @@ void Data_Manager::draw_functions()
 
 Data_Manager::Data_Manager() : key_board_lock_id(get_uuid())
 {
-    camera.coord_sys.origin = {double(plot_padding.x), double(GetScreenHeight() - plot_padding.y)};
+    camera.coord_sys.origin = {double(plot_padding.x), double(SCREEN_HEIGHT - plot_padding.y)};
     camera.coord_sys.basis_x = {1, 0};
     camera.coord_sys.basis_y = {0, -1};
 }
@@ -280,8 +277,6 @@ void Data_Manager::update()
 
     if (camera.is_undefined())
 	fit_camera_to_plot();
-
-
 
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
 	Vector2 mouse_delta = GetMouseDelta();
@@ -481,7 +476,6 @@ void Data_Manager::update_references()
     }
 }
 
-// quadratic, only use when actually necessary
 void Data_Manager::update_element_indices()
 {
     for (size_t i = 0; i < plot_data.size(); ++i) {

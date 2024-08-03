@@ -1,9 +1,11 @@
 #include "gui_elements.hpp"
 
+#include "raylib.h"
+
 #include "global_vars.hpp"
+#include "object_operations.hpp"
 #include "command_parser.hpp"
 #include "lexer.hpp"
-#include "raylib.h"
 #include "utils.hpp"
 
 // content tree
@@ -22,12 +24,23 @@ constexpr int TEXT_INPUT_FONT_SIZE = 20;
 constexpr float TEXT_INPUT_MIN_BOX_SIZE = 100;
 constexpr double TEXT_INPUT_CURSO_BLINK_TIME = 0.5; // in seconds
 
-// log draw
-constexpr Vec2<int> LOG_DRAW_OFFSET{20, 20};
-constexpr Font *LOG_DRAW_FONT = &g_app_font_20;
-constexpr int LOG_DRAW_FONT_SIZE = 20;
-constexpr float LOG_DRAW_WINDOW_WIDTH_RATIO = 0.25;
-
+bool handle_dropped_files(Data_Manager& data_manager) {
+    if (IsFileDropped()) {
+	FilePathList path_list = LoadDroppedFiles();
+	for(uint32_t i = 0; i < path_list.count; ++i) {
+	    std::string file_extension = get_file_extension(path_list.paths[i]);
+	    if (file_extension == ".script") {
+		run_command_file_absolute_path(data_manager, std::string(path_list.paths[i]));
+	    }
+	    else {
+		data_manager.load_external_plot_data(path_list.paths[i]);
+	    }
+	}
+	UnloadDroppedFiles(path_list);
+	return true;
+    }
+    return false;
+}
 
 static Vector2 draw_and_check_text_boxed(Font font, const char *text, Vector2 position, float fontSize, float spacing, Color tint, Content_Tree_Element* elem)
 {

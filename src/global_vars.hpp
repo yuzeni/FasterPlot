@@ -4,6 +4,10 @@
 #include "utils.hpp"
 #include <cstdint>
 
+constexpr int TARGET_FPS = 60;
+constexpr int SCREEN_WIDTH = 800;
+constexpr int SCREEN_HEIGHT = 600;
+
 inline Font g_app_font_18;
 inline Font g_app_font_20;
 inline Font g_app_font_22;
