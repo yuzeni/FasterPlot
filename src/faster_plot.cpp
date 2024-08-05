@@ -19,10 +19,11 @@ int main()
     g_app_font_22 = LoadFontEx("resources/Roboto-Regular.ttf", 22, nullptr, 0);
 
     Text_Input text_input;
+    Content_Tree content_tree;
 
     while (!WindowShouldClose())
     {
-	app_loop(text_input);
+	app_loop(text_input, content_tree);
     }
     
     CloseWindow();

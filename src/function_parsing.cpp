@@ -53,7 +53,8 @@ Op_Tree_Node *nud_ident(NUD_ARGS)
     Op_Tree_Node* node = new Op_Tree_Node{lexer.tkn(0)};
     ++lexer.tkn_idx;
     generic_function.params.push_back({ .val = std::numeric_limits<double>().quiet_NaN(),
-	                                .name = std::string(node->tkn.sv) });
+	                                .name = std::string(node->tkn.sv),
+					.fit_change_rate = 1 });
     node->param_idx = generic_function.params.size() - 1;
     return node;
 }

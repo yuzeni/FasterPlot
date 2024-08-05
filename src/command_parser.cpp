@@ -411,10 +411,10 @@ void op_unary_assign(Lexer& lexer, Command_Object object, Command_Object arg_una
 	case OT_token:
 	    switch (arg_unary.tkn.type) {
 	    case tkn_sinusoid:
-		data_manager.change_function_type(object.obj.function, new Sinusoidal_Function{});
+		data_manager.change_function_type(object.obj.function, new Sinusoidal_Function);
 		return;
 	    case tkn_linear:
-		data_manager.change_function_type(object.obj.function, new Linear_Function{});
+		data_manager.change_function_type(object.obj.function, new Linear_Function);
 		return;
 	    case tkn_y:
 		if (lexer.tkn(0).type == '=') {
@@ -478,10 +478,10 @@ void op_fit_assign(Lexer &lexer, Command_Object object, Command_Operator op, Com
 
     switch(arg_unary.tkn.type) {
     case tkn_sinusoid:
-	data_manager.change_function_type(object.obj.function, new Sinusoidal_Function{});
+	object.obj.function = data_manager.change_function_type(object.obj.function, new Sinusoidal_Function);
 	break;
     case tkn_linear:
-	data_manager.change_function_type(object.obj.function, new Linear_Function{});
+	object.obj.function = data_manager.change_function_type(object.obj.function, new Linear_Function);
 	break;
     default:
 	lexer.parsing_error(arg_unary.tkn, "The argument '%s' is not supported by the operation '%s'",

@@ -79,10 +79,10 @@ void Sinusoidal_Function::fit_to_data(Plot_Data *plot_data, int iterations, std:
 double Sinusoidal_Function::get_fit_parameter_change_rate(int idx)
 {
     switch(idx) {
-    case 0: return 100;
-    case 1: return 100;
-    case 2: return 0.001;
-    case 3: return 100;
+    case 0: return 1;
+    case 1: return 1;
+    case 2: return 0.00001;
+    case 3: return 1;
     default: return 0;
     }
 }
@@ -435,8 +435,8 @@ void Linear_Function::fit_to_data(Plot_Data *plot_data, int iterations, std::vec
 double Linear_Function::get_fit_parameter_change_rate(int idx)
 {
     switch(idx) {
-    case 0: return 0.00001;
-    case 1: return 100;
+    case 0: return 0.0000001;
+    case 1: return 1;
     default: return 0;
     }
 }
@@ -509,8 +509,9 @@ void Generic_Function::fit_to_data(Plot_Data *plot_data, int iterations, std::ve
 }
 
 // TODO improve this, find some algorithm for determining the learning rate based on the structure of the 'op_tree'
-double Generic_Function::get_fit_parameter_change_rate([[maybe_unused]] int idx)
+double Generic_Function::get_fit_parameter_change_rate(int idx)
 {
+    
     return 1;
 }
 
@@ -557,7 +558,7 @@ static double squared_error_derivative(Plot_Data* data, double *param, Function&
 static void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vector<double*>& param_list, std::vector<double>& param_change_rate, int iterations)
 {
     logger.log_info("Error before iterative optimization: %f\n", squared_error(data, function));
-    const double learning_rate = 0.001;
+    const double learning_rate = 0.1;
     
     std::vector<double> derivatives(param_list.size(), 0);
 

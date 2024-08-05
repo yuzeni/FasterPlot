@@ -79,6 +79,7 @@ struct Parameter
 {
     double val;
     std::string name;
+    double fit_change_rate;
 };
 
 class Generic_Function : public Function

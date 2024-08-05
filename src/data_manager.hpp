@@ -93,14 +93,14 @@ struct Data_Manager
     VP_Camera camera;
     const Vec2<int> plot_padding = {50, 50};
 
-    void update();
+    void update(Content_Tree& content_tree);
     void draw();
     void load_external_plot_data(const std::string& file_name);
     Plot_Data* new_plot_data(Plot_Data* data = nullptr);
     void delete_plot_data(Plot_Data *data);
     Function* new_function();
     void delete_function(Function *function);
-    void change_function_type(Function *orig_func, Function* new_func);
+    Function* change_function_type(Function *orig_func, Function* new_func);
     void fit_camera_to_plot(Plot_Data* plot_data);
     void fit_camera_to_plot(Function* func);
     void zero_coord_sys_origin();
@@ -113,7 +113,7 @@ struct Data_Manager
 private:
 
     int graph_color_array_idx = 0;
-    Content_Tree content_tree;
+    // Content_Tree content_tree;
     const int key_board_lock_id;
 
     std::vector<Plot_Data*> original_plot_data;

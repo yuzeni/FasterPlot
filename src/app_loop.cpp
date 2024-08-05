@@ -5,19 +5,20 @@
 #include "data_manager.hpp"
 
 // primary application loop
-void app_loop(Text_Input &text_input)
+void app_loop(Text_Input &text_input, Content_Tree& content_tree)
 {
     if (!WindowShouldClose())
     {
 	handle_dropped_files(data_manager);
 	text_input.update(data_manager);
-	data_manager.update();
+	data_manager.update(content_tree);
 
 	BeginDrawing();
 	{
 	    ClearBackground(WHITE);
 	    data_manager.draw();
 	    text_input.draw();
+	    content_tree.draw();
 	}
 	EndDrawing();
     }

@@ -8,6 +8,7 @@
 
 #include "functions.hpp"
 #include "global_vars.hpp"
+#include "gui_elements.hpp"
 #include "raylib.h"
 #include "utils.hpp"
 #include "command_parser.hpp"
@@ -201,7 +202,7 @@ void Data_Manager::delete_function(Function *func)
     update_element_indices();
 }
 
-void Data_Manager::change_function_type(Function *orig_func, Function* new_func)
+Function* Data_Manager::change_function_type(Function *orig_func, Function* new_func)
 {
     new_func->info = orig_func->info;
     new_func->index = orig_func->index;
@@ -210,6 +211,7 @@ void Data_Manager::change_function_type(Function *orig_func, Function* new_func)
     
     delete orig_func;
     functions[new_func->index] = new_func;
+    return new_func;
 }
 
 void Data_Manager::copy_data_to_data(std::vector<Plot_Data*>& from_plot_data, std::vector<Plot_Data*>& to_plot_data,
@@ -267,7 +269,7 @@ bool Data_Manager::keyboard_access()
     return g_keyboard_lock == 0 || g_keyboard_lock == key_board_lock_id;
 }
 
-void Data_Manager::update()
+void Data_Manager::update(Content_Tree& content_tree)
 {
     static int old_g_screen_height = GetScreenHeight();
     camera.coord_sys.origin.y += GetScreenHeight() - old_g_screen_height;
@@ -337,7 +339,6 @@ void Data_Manager::draw()
     draw_vp_camera_coordinate_system(camera, COORDINATE_SYSTEM_GRID_SPACING);
     draw_plot_data();
     draw_functions();
-    content_tree.draw();
 }
 
 void Data_Manager::zero_coord_sys_origin()
