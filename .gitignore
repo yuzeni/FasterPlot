@@ -2,6 +2,9 @@
 env/
 build/
 emacs/
+test_eingabe/
+
+# Files
 compile_flags.txt
 
 # Emacs
@@ -9,9 +12,7 @@ compile_flags.txt
 *~
 .\#*
 
-# visual studio
+# Visual Studio
 *.obj
 *.pdb
 *.sln
-
-test_eingabe/

@@ -1,41 +1,50 @@
-#include "function_fitting.hpp"
+#include "functions.hpp"
 
-#include <cmath>
-#include <string>
-#include <vector>
-#include <iostream>
-
-#include "app_loop.hpp"
 #include "data_manager.hpp"
-#include "global_vars.hpp"
-#include "raylib.h"
+#include "app_loop.hpp"
+#include "function_parsing.hpp"
 #include "utils.hpp"
+#include <string>
 
-double Sinusoidal_Function::operator()(double x) const
-{
-    return a + b * std::sin(c * x + d);
-}
+static void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vector<double*>& param_list, std::vector<double>& param_change_rate, int iterations);
 
-std::string Sinusoidal_Function::get_string_value() const
+void Function::get_all_param_ref_and_fit_change_rate(std::vector<double*>& param_list, std::vector<double>& param_change_rate)
 {
-    return std::to_string(a) + " + " + std::to_string(b) + " * sin(" + std::to_string(c) + " * x + " + std::to_string(d) + ")";
-}
-
-std::string Sinusoidal_Function::get_string_no_value() const
-{
-    return "a + b * sin(c * x + d)";
-}
-
-double Sinusoidal_Function::get_fit_parameter_change_rate(int idx)
-{
-    switch(idx) {
-    case 0: return 100;
-    case 1: return 100;
-    case 2: return 0.001;
-    case 3: return 100;
-    default: return 0;
+    int param_idx = 0;
+    double* param_ref = get_parameter_ref(param_idx);
+    while(param_ref)
+    {
+	param_list.push_back(param_ref);
+	param_change_rate.push_back(get_fit_parameter_change_rate(param_idx));
+	
+	param_idx++;
+	param_ref = get_parameter_ref(param_idx);
     }
 }
+
+void Function::update_content_tree_element(size_t index)
+{
+    content_element.name = "function " + std::to_string(index) + (!info.header.empty() ? " '" + info.header + "'" : "");
+    content_element.name += " (x) = " + get_string_no_value();
+    content_element.name_color = info.color;
+    content_element.content.clear();
+    content_element.content.push_back({"f(x) = " + get_string_value()});
+    
+    if (info.visible)
+	content_element.content.push_back({"visible"});
+    else
+	content_element.content.push_back({"hidden"});
+    if (fit_from_data) {
+	content_element.content.push_back({"fit of "});
+	content_element.content.push_back({fit_from_data->content_element.name, false, fit_from_data->info.color});
+    }
+}
+
+/* Sinusoidal Function **************************/
+
+double Sinusoidal_Function::operator()(double x) const { return a + b * std::sin(c * x + d); }
+std::string Sinusoidal_Function::get_string_value() const { return std::to_string(a) + " + " + std::to_string(b) + " * sin(" + std::to_string(c) + " * x + " + std::to_string(d) + ")"; }
+std::string Sinusoidal_Function::get_string_no_value() const { return "a + b * sin(c * x + d)"; }
 
 double* Sinusoidal_Function::get_parameter_ref(std::string_view name)
 {
@@ -59,6 +68,25 @@ int Sinusoidal_Function::get_parameter_idx(std::string_view name)
     return -1;
 }
 
+void Sinusoidal_Function::fit_to_data(Plot_Data *plot_data, int iterations, std::vector<double *> &param_list, std::vector<double> &param_change_rate, bool warm_start)
+{
+    if (warm_start) {
+	sinusoid_fit_approximation(plot_data);
+    }
+    function_fit_iterative_naive(plot_data, *this, param_list, param_change_rate, iterations);
+}
+
+double Sinusoidal_Function::get_fit_parameter_change_rate(int idx)
+{
+    switch(idx) {
+    case 0: return 100;
+    case 1: return 100;
+    case 2: return 0.001;
+    case 3: return 100;
+    default: return 0;
+    }
+}
+
 double* Sinusoidal_Function::get_parameter_ref(int idx)
 {
     switch(idx) {
@@ -67,61 +95,11 @@ double* Sinusoidal_Function::get_parameter_ref(int idx)
     case 2: return &c;
     case 3: return &d;
     default: return nullptr;
-    }
+    }    
 }
 
-double Linear_Function::operator()(double x) const
-{
-    return a * x + b;
-}
-
-std::string Linear_Function::get_string_value() const
-{
-    return std::to_string(a) + " * x + " + std::to_string(b);
-}
-
-std::string Linear_Function::get_string_no_value() const
-{
-    return "a * x + b";
-}
-
-double Linear_Function::get_fit_parameter_change_rate(int idx)
-{
-    switch(idx) {
-    case 0: return 0.00001;
-    case 1: return 100;
-    default: return 0;
-    }
-}
-
-double* Linear_Function::get_parameter_ref(std::string_view name)
-{
-    switch(hash_string_view(name)) {
-    case cte_hash_c_str("a"): return &a;
-    case cte_hash_c_str("b"): return &b;
-    }
-    return nullptr;
-}
-
-int Linear_Function::get_parameter_idx(std::string_view name)
-{
-    switch(hash_string_view(name)) {
-    case cte_hash_c_str("a"): return 0;
-    case cte_hash_c_str("b"): return 1;
-    }
-    return -1;
-}
-
-double* Linear_Function::get_parameter_ref(int idx)
-{
-    switch(idx) {
-    case 0: return &a;
-    case 1: return &b;
-    default: return nullptr;
-    }
-}
-
-// Sinusoidal Fit Algorithm: https://stackoverflow.com/questions/77350332/sine-curve-to-fit-data-cloud-using-c
+// Sinusoidal Fit Algorithm (for first approximation):
+// https://stackoverflow.com/questions/77350332/sine-curve-to-fit-data-cloud-using-c
 
 static void get_SS_n__with_x(double* SS_n, int n, Plot_Data* data)
 {
@@ -422,19 +400,58 @@ void Sinusoidal_Function::sinusoid_fit_approximation(Plot_Data* data)
     d = std::atan(abc.v[1] / abc.v[2]);
 }
 
-void Sinusoidal_Function::get_fit_init_values(Plot_Data *data)
+/* Linear Function **************************/
+
+double Linear_Function::operator()(double x) const { return a * x + b; }
+std::string Linear_Function::get_string_value() const { return std::to_string(a) + " * x + " + std::to_string(b); }
+std::string Linear_Function::get_string_no_value() const { return "a * x + b"; }
+
+double* Linear_Function::get_parameter_ref(std::string_view name)
 {
-    sinusoid_fit_approximation(data);
+    switch(hash_string_view(name)) {
+    case cte_hash_c_str("a"): return &a;
+    case cte_hash_c_str("b"): return &b;
+    }
+    return nullptr;
 }
 
-void Linear_Function::get_fit_init_values(Plot_Data *data)
+int Linear_Function::get_parameter_idx(std::string_view name)
 {
-    // double average = 0;
-    // for (size_t i = 0; i < data->size(); ++i) {
-    // 	average += data->y[i];
-    // }
-    // average /= data->size();
- 
+    switch(hash_string_view(name)) {
+    case cte_hash_c_str("a"): return 0;
+    case cte_hash_c_str("b"): return 1;
+    }
+    return -1;
+}
+
+void Linear_Function::fit_to_data(Plot_Data *plot_data, int iterations, std::vector<double *> &param_list, std::vector<double> &param_change_rate, bool warm_start)
+{
+    if (warm_start) {
+	linear_fit_approximation(plot_data);
+    }
+    function_fit_iterative_naive(plot_data, *this, param_list, param_change_rate, iterations);
+}
+
+double Linear_Function::get_fit_parameter_change_rate(int idx)
+{
+    switch(idx) {
+    case 0: return 0.00001;
+    case 1: return 100;
+    default: return 0;
+    }
+}
+
+double* Linear_Function::get_parameter_ref(int idx)
+{
+    switch(idx) {
+    case 0: return &a;
+    case 1: return &b;
+    default: return nullptr;
+    }
+}
+
+void Linear_Function::linear_fit_approximation(Plot_Data *data)
+{
     double Ax, Ay, Bx, By;
 
     if (data->size() < 2) {
@@ -457,6 +474,57 @@ void Linear_Function::get_fit_init_values(Plot_Data *data)
     a = (Ay - By) / (Ax - Bx);
     b = By - a * Bx;
 }
+
+
+/* Generic Function **************************/
+
+Generic_Function::Generic_Function(Lexer& lexer)
+{
+    op_tree.base_node = parse_expression(lexer, *this);
+}
+
+double* Generic_Function::get_parameter_ref(std::string_view name)
+{
+    for (auto& param : params) {
+	if (hash_string_view(name) == hash_c_str(param.name.c_str())) {
+	    return &param.val;
+	}
+    }
+    return nullptr;
+}
+
+int Generic_Function::get_parameter_idx(std::string_view name)
+{
+    for (size_t i = 0; i < params.size(); ++i) {
+	if (hash_string_view(name) == hash_c_str(params[i].name.c_str())) {
+	    return i;
+	}
+    }
+    return -1;
+}
+
+void Generic_Function::fit_to_data(Plot_Data *plot_data, int iterations, std::vector<double *> &param_list, std::vector<double> &param_change_rate, [[maybe_unused]] bool warm_start)
+{
+    function_fit_iterative_naive(plot_data, *this, param_list, param_change_rate, iterations);
+}
+
+// TODO improve this, find some algorithm for determining the learning rate based on the structure of the 'op_tree'
+double Generic_Function::get_fit_parameter_change_rate([[maybe_unused]] int idx)
+{
+    return 1;
+}
+
+double* Generic_Function::get_parameter_ref(int idx)
+{
+    if (idx < int(params.size())) {
+	return &params[idx].val;
+    }
+    else {
+	return nullptr;
+    }
+}
+
+/* Function Type Independents **************************/
 
 static double squared_error(Plot_Data* data, Function& function)
 {
@@ -486,7 +554,7 @@ static double squared_error_derivative(Plot_Data* data, double *param, Function&
     return (squared_error_yb - squared_error_ya) / delta_x;
 }
 
-void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vector<double*>& param_list, std::vector<double>& param_change_rate, int iterations)
+static void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vector<double*>& param_list, std::vector<double>& param_change_rate, int iterations)
 {
     logger.log_info("Error before iterative optimization: %f\n", squared_error(data, function));
     const double learning_rate = 0.001;

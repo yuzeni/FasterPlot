@@ -57,9 +57,14 @@ enum Token_enum : uint32_t {
     tkn_update_mul,
     tkn_update_div,
     tkn_update_pow,
-    tkn_update_mod,
-    tkn_pow,
-    tkn_range,
+    tkn_pow,        // **
+    tkn_or,         // ||
+    tkn_and,        // &&
+    tkn_eq,         // ==
+    tkn_neq,        // != 
+    tkn_less_eq,    // <=
+    tkn_greater_eq, // >=
+    tkn_range,      // ..
     
     tkn_SIZE,
 };
@@ -143,5 +148,5 @@ bool is_delim_tkn_right(Token_enum type);
 
 constexpr bool is_assignment_operator_tkn(Token_enum type)
 {
-    return type == '=' || (type >= tkn_update_add && type <= tkn_update_mod);
+    return type == '=' || (type >= tkn_update_add && type <= tkn_update_pow);
 }

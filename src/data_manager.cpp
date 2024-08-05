@@ -6,6 +6,7 @@
 #include <fstream>
 #include <filesystem>
 
+#include "functions.hpp"
 #include "global_vars.hpp"
 #include "raylib.h"
 #include "utils.hpp"
@@ -49,33 +50,12 @@ void Plot_Data::update_content_tree_element(size_t index)
     content_element.content.push_back({"size = " + std::to_string(y.size())});
 }
 
-void Function::update_content_tree_element(size_t index)
-{
-    content_element.name = "function " + std::to_string(index) + (!info.header.empty() ? " '" + info.header + "'" : "");
-
-    content_element.name += " (x) = " + get_string_no_value();
-	
-    content_element.name_color = info.color;
-    content_element.content.clear();
-    
-    content_element.content.push_back({"f(x) = " + get_string_value()});
-    
-    if (info.visible)
-	content_element.content.push_back({"visible"});
-    else
-	content_element.content.push_back({"hidden"});
-    if (fit_from_data) {
-	content_element.content.push_back({"fit of "});
-	content_element.content.push_back({fit_from_data->content_element.name, false, fit_from_data->info.color});
-    }
-}
-
 static void draw_vp_camera_coordinate_system(VP_Camera camera, int target_spacing)
 {
     int grid_resolution = std::max(GetScreenWidth(), GetScreenHeight()) / target_spacing;
     
-    Vec2<double> axis_length = {ceil(std::max(GetScreenWidth(), GetScreenHeight()) / camera.coord_sys.basis_x.length()),
-				ceil(std::max(GetScreenWidth(), GetScreenHeight()) / camera.coord_sys.basis_y.length())};
+    Vec2<double> axis_length = {double(std::max(GetScreenWidth(), GetScreenHeight())) / camera.coord_sys.basis_x.length(),
+				double(std::max(GetScreenWidth(), GetScreenHeight())) / camera.coord_sys.basis_y.length()};
     Vec2<double> t_origin = camera.coord_sys.origin;
     Vec2<double> t_grid_base_x = camera.coord_sys.basis_x * (axis_length.x / double(grid_resolution));
     Vec2<double> t_grid_base_y = camera.coord_sys.basis_y * (axis_length.y / double(grid_resolution));
@@ -88,10 +68,10 @@ static void draw_vp_camera_coordinate_system(VP_Camera camera, int target_spacin
 	DrawLineEx(t_origin + t_grid_base_x * grid_resolution + t_grid_base_y * i,
 		   t_origin + t_grid_base_x * grid_resolution * -1 + t_grid_base_y * i, 1, color);
 	
-	snprintf(text_buffer, 64, "%.4g", (t_grid_base_x.length() * double(i)) / camera.coord_sys.basis_x.length() - camera.origin_offset.x);
+	snprintf(text_buffer, 64, "%.5g", (t_grid_base_x.length() * double(i)) / camera.coord_sys.basis_x.length() - camera.origin_offset.x);
 	Vec2<double> text_pos = t_origin + t_grid_base_x * double(i);
 	DrawTextEx(*COORDINATE_SYSTEM_FONT, text_buffer, Vector2{float(text_pos.x), float(text_pos.y)}, COORDINATE_SYSTEM_FONT_SIZE, 0, COORDINATE_SYSTEM_FONT_COLOR);
-	snprintf(text_buffer, 64, "%.4g", (t_grid_base_y.length() * double(i)) / camera.coord_sys.basis_y.length() - camera.origin_offset.y);
+	snprintf(text_buffer, 64, "%.5g", (t_grid_base_y.length() * double(i)) / camera.coord_sys.basis_y.length() - camera.origin_offset.y);
 	text_pos = t_origin + t_grid_base_y * (double(i) + double(i == 0 ? 0.25 : 0));
 	DrawTextEx(*COORDINATE_SYSTEM_FONT, text_buffer, Vector2{float(text_pos.x), float(text_pos.y)}, COORDINATE_SYSTEM_FONT_SIZE, 0, COORDINATE_SYSTEM_FONT_COLOR);
     }
@@ -112,8 +92,9 @@ void Data_Manager::draw_plot_data()
 		DrawCircle(std::round(screen_space_point.x), std::round(screen_space_point.y), pd->info.thickness / 2.f, pd->info.color);
 	    }
 	    if(pd->info.plot_type & PT_INTERP_LINEAR) {
-		if(ix > 0)
+		if(ix > 0) {
 		    DrawLineEx(prev_screen_space_point, screen_space_point, pd->info.thickness / 3.f, pd->info.color);
+		}
 	    }
 	    if(pd->info.plot_type & PT_SHOW_INDEX) {
 		DrawTextEx(*PLOT_DATA_FONT, std::to_string(ix).c_str(), Vector2{float(screen_space_point.x + 2.0), float(screen_space_point.y + 2.0)},
@@ -141,8 +122,9 @@ void Data_Manager::draw_functions()
 		DrawCircle(std::round(screen_space_point.x), std::round(screen_space_point.y), func->info.thickness / 2.f, func->info.color);
 	    }
 	    if(func->info.plot_type & PT_INTERP_LINEAR) {
-		if(ix > 0)
+		if(ix > 0) {
 		    DrawLineEx(prev_screen_space_point, screen_space_point, func->info.thickness / 3.f, func->info.color);
+		}
 	    }
 	    prev_screen_space_point = screen_space_point;
 	}
@@ -199,13 +181,14 @@ void Data_Manager::delete_plot_data(Plot_Data *data)
 
 Function* Data_Manager::new_function()
 {
-    functions.push_back(new Function);
+    functions.push_back(new Generic_Function);
     
     functions.back()->info.color = graph_color_array[graph_color_array_idx];
     functions.back()->index = functions.size() - 1;
     ++graph_color_array_idx;
-    if (graph_color_array_idx >= graph_color_array_cnt)
+    if (graph_color_array_idx >= graph_color_array_cnt) {
 	graph_color_array_idx = 0;
+    }
     
     return functions.back();
 }
@@ -216,6 +199,17 @@ void Data_Manager::delete_function(Function *func)
     delete func;
 
     update_element_indices();
+}
+
+void Data_Manager::change_function_type(Function *orig_func, Function* new_func)
+{
+    new_func->info = orig_func->info;
+    new_func->index = orig_func->index;
+    new_func->content_element = orig_func->content_element;
+    new_func->fit_from_data = orig_func->fit_from_data;
+    
+    delete orig_func;
+    functions[new_func->index] = new_func;
 }
 
 void Data_Manager::copy_data_to_data(std::vector<Plot_Data*>& from_plot_data, std::vector<Plot_Data*>& to_plot_data,
@@ -240,7 +234,7 @@ void Data_Manager::copy_data_to_data(std::vector<Plot_Data*>& from_plot_data, st
     }
 
     for(size_t i = 0; i < from_functions.size(); ++i) {
-        to_functions[i] = new Function;
+        to_functions[i] = new Generic_Function;
 	*to_functions[i] = *from_functions[i];
     }
 }
@@ -398,7 +392,9 @@ void Data_Manager::fit_camera_to_plot(bool go_to_zero)
 	camera.origin_offset.x = -min_x;
     }
     else {
-	camera.coord_sys.basis_x = { 1, 0 };
+	if (camera.coord_sys.basis_x.x == 0 && camera.coord_sys.basis_x.y == 0) {
+	    camera.coord_sys.basis_x = { 1, 0 };
+	}
 	camera.origin_offset.x = 0;
     }
     
@@ -407,7 +403,9 @@ void Data_Manager::fit_camera_to_plot(bool go_to_zero)
 	camera.origin_offset.y = -min_y;
     }
     else {
-	camera.coord_sys.basis_y = { 0, -1};
+	if (camera.coord_sys.basis_x.x == 0 && camera.coord_sys.basis_x.y == 0) {
+	    camera.coord_sys.basis_y = { 0, -1};
+	}
 	camera.origin_offset.x = 0;
     }
 

@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "function_fitting.hpp"
 #include "gui_elements.hpp"
+#include "functions.hpp"
 
 constexpr int graph_color_array_cnt = 20;
 inline Color graph_color_array[graph_color_array_cnt] = {
@@ -32,22 +32,6 @@ inline Color graph_color_array[graph_color_array_cnt] = {
     DARKGRAY,
 };
 
-enum Plot_Type
-{
-    PT_DISCRETE = 1,
-    PT_INTERP_LINEAR = 1 << 1,
-    PT_SHOW_INDEX = 1 << 2,
-};
-
-struct Plot_Info
-{
-    std::string header;
-    Color color = BLACK;
-    Plot_Type plot_type = Plot_Type(PT_INTERP_LINEAR);
-    float thickness = 4;
-    bool visible = true;
-};
-
 struct Plot_Data
 {
     Plot_Info info;
@@ -67,132 +51,6 @@ struct Plot_Data
     Plot_Data* x = nullptr;
 };
 
-struct Function
-{
-    Plot_Info info;
-    Function_Type type = FT_undefined;
-    Content_Tree_Element content_element;
-    Plot_Data* fit_from_data = nullptr;
-    size_t index = 0;
-    
-    double operator()(double x) const
-    {
-	switch(type) {
-	case FT_linear:   return func.linear(x);
-	case FT_sinusoid: return func.sinusoid(x);
-	default: 	  return 0;
-	}
-    }
-
-    std::string get_string_value() const
-    {
-	switch(type) {
-	case FT_linear:   return func.linear.get_string_value();
-	case FT_sinusoid: return func.sinusoid.get_string_value();
-	default: 	  return "undefined function";
-	}
-    }
-    
-    std::string get_string_no_value() const
-    {
-	switch(type) {
-	case FT_linear:   return func.linear.get_string_no_value();
-	case FT_sinusoid: return func.sinusoid.get_string_no_value();
-	default:          return "undefined function";
-	}
-    }
-
-    double* get_parameter_ref(std::string_view name)
-    {
-	switch(type) {
-	case FT_linear:   return func.linear.get_parameter_ref(name);
-	case FT_sinusoid: return func.sinusoid.get_parameter_ref(name);
-	default:          return nullptr;
-	}
-    }
-
-    int get_parameter_idx(std::string_view name)
-    {
-	switch(type) {
-	case FT_linear:   return func.linear.get_parameter_idx(name);
-	case FT_sinusoid: return func.sinusoid.get_parameter_idx(name);
-	default:          return -1;
-	}
-    }
-
-    void fit_to_data(Plot_Data* plot_data, int iterations, std::vector<double*>& param_list, std::vector<double>& param_change_rate, bool warm_start = true)
-    {
-	if (warm_start) {
-	    switch(type) {
-	    case FT_linear:
-		func.linear.get_fit_init_values(plot_data);
-		break;
-	    case FT_sinusoid:
-		func.sinusoid.get_fit_init_values(plot_data);
-		break;
-	    }
-	}
-	
-	function_fit_iterative_naive(plot_data, *this, param_list, param_change_rate, iterations);
-    }
-
-    double get_fit_parameter_change_rate(int idx)
-    {
-	switch(type) {
-	case FT_linear:   return func.linear.get_fit_parameter_change_rate(idx);
-	case FT_sinusoid: return func.sinusoid.get_fit_parameter_change_rate(idx);
-	default: return 0;
-	}
-    }
-
-    double* get_parameter_ref(int idx)
-    {
-	switch(type) {
-	case FT_linear:   return func.linear.get_parameter_ref(idx);
-	case FT_sinusoid: return func.sinusoid.get_parameter_ref(idx);
-	default: return nullptr;
-	}
-    }
-
-    void get_all_param_ref_and_fit_change_rate(std::vector<double*>& param_list, std::vector<double>& param_change_rate)
-    {
-	int param_idx = 0;
-	double* param_ref = get_parameter_ref(param_idx);
-	while(param_ref)
-	{
-	    param_list.push_back(param_ref);
-	    param_change_rate.push_back(get_fit_parameter_change_rate(param_idx));
-	
-	    param_idx++;
-	    param_ref = get_parameter_ref(param_idx);
-	}
-    }
-
-    void init()
-    {
-	switch(type) {
-	case FT_linear:
-	    func.linear = Linear_Function{};
-	    break;
-	case FT_sinusoid:
-	    func.sinusoid = Sinusoidal_Function{};
-	    break;
-	default:
-	    func.undefined = Undefined_Function{};
-	    break;
-	}
-    }
-
-    void update_content_tree_element(size_t index);
-    
-    union {
-	Undefined_Function undefined = Undefined_Function{};
-	Linear_Function linear;
-	Sinusoidal_Function sinusoid;
-    } func;
-
-    std::vector<double*> param_list;
-};
 
 struct Coordinate_System
 {
@@ -242,6 +100,7 @@ struct Data_Manager
     void delete_plot_data(Plot_Data *data);
     Function* new_function();
     void delete_function(Function *function);
+    void change_function_type(Function *orig_func, Function* new_func);
     void fit_camera_to_plot(Plot_Data* plot_data);
     void fit_camera_to_plot(Function* func);
     void zero_coord_sys_origin();

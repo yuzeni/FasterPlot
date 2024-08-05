@@ -130,6 +130,14 @@ consteval uint64_t cte_hash_c_str(const char *str, uint64_t hash = utils::defaul
     return hash;
 }
 
+inline uint64_t hash_c_str(const char *str, uint64_t hash = utils::default_str_hash_value)
+{
+    int c;
+    while((c = *(str++)))
+	hash = (hash * 33) ^ c;
+    return hash;
+}
+
 uint64_t hash_string_view(std::string_view s_v, uint64_t hash = utils::default_str_hash_value);
 
 template <typename T>

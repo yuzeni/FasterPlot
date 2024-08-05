@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <limits>
 
-#include "function_fitting.hpp"
+#include "functions.hpp"
 #include "global_vars.hpp"
 #include "utils.hpp"
 #include "lexer.hpp"
@@ -20,8 +20,6 @@ void Command_Object::delete_new_object(Data_Manager& data_manager) {
 	}
     }
 }
-
-static void handle_command_impl(Data_Manager &data_manager, Lexer &lexer);
 
 static bool expect_next_token(Lexer &lexer)
 {
@@ -406,22 +404,34 @@ void op_unary_assign(Lexer& lexer, Command_Object object, Command_Object arg_una
 	}
 	break;
     case OT_function:
-	if (arg_unary.type == OT_function) {
-	    object.obj.function->type = arg_unary.obj.function->type;
-	    object.obj.function->func = arg_unary.obj.function->func;
+	switch(arg_unary.type) {
+	case OT_function:
+	    object.obj.function = arg_unary.obj.function;
 	    return;
-	}
-	else if (arg_unary.type == OT_token) {
+	case OT_token:
 	    switch (arg_unary.tkn.type) {
 	    case tkn_sinusoid:
-		object.obj.function->type = FT_sinusoid;
-		object.obj.function->init();
+		data_manager.change_function_type(object.obj.function, new Sinusoidal_Function{});
 		return;
 	    case tkn_linear:
-		object.obj.function->type = FT_linear;
-		object.obj.function->init();
+		data_manager.change_function_type(object.obj.function, new Linear_Function{});
+		return;
+	    case tkn_y:
+		if (lexer.tkn(0).type == '=') {
+		    ++lexer.tkn_idx;
+		    data_manager.change_function_type(object.obj.function, new Generic_Function{lexer});
+		}
+		else {
+		    lexer.parsing_error(lexer.tkn(0), "Expected a generic function declaration.");
+		}
+		return;
+	    default:
+		lexer.parsing_error(lexer.tkn(0), "Unexpected thing right here.");
 		return;
 	    }
+	default:
+	    lexer.parsing_error(lexer.tkn(0), "Cannot assign this object to a function.");
+	    return;
 	}
     case OT_plot_data_ptr:
 	if (arg_unary.type == OT_plot_data) {
@@ -436,10 +446,12 @@ void op_unary_assign(Lexer& lexer, Command_Object object, Command_Object arg_una
 	case OT_value:
 	    *object.obj.val_ptr = arg_unary.obj.val;
 	    return;
+	default:
+	    return;
 	}
+    default:
+	lexer.parsing_error(arg_unary.tkn, "Cannot assign to this object.");
     }
-
-    lexer.parsing_error(arg_unary.tkn, "Cannot assign this object.");
 }
 
 void op_fit_assign(Lexer &lexer, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary)
@@ -466,10 +478,10 @@ void op_fit_assign(Lexer &lexer, Command_Object object, Command_Operator op, Com
 
     switch(arg_unary.tkn.type) {
     case tkn_sinusoid:
-	object.obj.function->type = FT_sinusoid;
+	data_manager.change_function_type(object.obj.function, new Sinusoidal_Function{});
 	break;
     case tkn_linear:
-	object.obj.function->type = FT_linear;
+	data_manager.change_function_type(object.obj.function, new Linear_Function{});
 	break;
     default:
 	lexer.parsing_error(arg_unary.tkn, "The argument '%s' is not supported by the operation '%s'",
@@ -483,7 +495,7 @@ void op_fit_assign(Lexer &lexer, Command_Object object, Command_Operator op, Com
     object.obj.function->fit_to_data(arg_binary.obj.plot_data, lexer.tkn(0).i, param_list, param_change_rate);
 }
 
-void op_extrema_assign(Lexer &lexer, Data_Manager &data_manager, Command_Object object, Command_Operator op, Command_Object arg_unary)
+void op_extrema_assign(Lexer &lexer, Data_Manager &data_manager, Command_Object object, [[maybe_unused]] Command_Operator op, Command_Object arg_unary)
 {
 
     if (object.type != OT_plot_data) {

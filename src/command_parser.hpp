@@ -34,7 +34,6 @@ inline const char *object_type_name_table[OT_SIZE] {
 };
 
 struct Plot_Data;
-struct Function;
 struct Command_Object
 {
     Object_Type type = OT_undefined;

@@ -4,7 +4,6 @@
 #include <filesystem>
 
 #include "data_manager.hpp"
-#include "function_fitting.hpp"
 #include "utils.hpp"
 #include "command_parser.hpp"
 #include "global_vars.hpp"

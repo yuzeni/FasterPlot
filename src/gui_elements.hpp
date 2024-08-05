@@ -11,7 +11,24 @@
 
 struct Data_Manager;
 
-bool handle_dropped_files(Data_Manager& data_manager);
+bool handle_dropped_files(Data_Manager &data_manager);
+
+
+enum Plot_Type
+{
+    PT_DISCRETE = 1,
+    PT_INTERP_LINEAR = 1 << 1,
+    PT_SHOW_INDEX = 1 << 2,
+};
+
+struct Plot_Info
+{
+    std::string header;
+    Color color = BLACK;
+    Plot_Type plot_type = Plot_Type(PT_INTERP_LINEAR);
+    float thickness = 4;
+    bool visible = true;
+};
 
 struct Content_Tree_Element_String {
 
