@@ -242,6 +242,10 @@ void Data_Manager::copy_data_to_data(std::vector<Plot_Data*>& from_plot_data, st
 void Data_Manager::load_external_plot_data(const std::string& file_name)
 {
     std::vector<Plot_Data*> data_list = parse_numeric_csv_file(file_name);
+    if (data_list.empty()) {
+	return;
+    }
+    
     for(const auto data : data_list) {
 	new_plot_data(data);
     }

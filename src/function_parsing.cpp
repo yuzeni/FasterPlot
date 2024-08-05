@@ -157,8 +157,15 @@ void Function_Op_Tree::stringify_op_tree(const Generic_Function& generic_functio
 	case tkn_x:
 	    str += 'x';
 	    break;
+	case tkn_true:
+	    str += "true";
+	    break;
+	case tkn_false:
+	    str += "false";
+	    break;
 	default:
 	    str += "error";
+	    break;
 	}
     };
 

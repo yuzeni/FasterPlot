@@ -160,7 +160,7 @@ std::pair<char *, size_t> parse_file_cstr(const char *file_name)
     std::ifstream file(file_name, std::ios::binary);
     
     if(!file.is_open()) {
-	logger.log_error("Failed to open file '%s'\n.", file_name);
+	logger.log_error("Failed to open file '%s'.", file_name);
 	return {nullptr, 0};
     }
     
@@ -172,7 +172,7 @@ std::pair<char *, size_t> parse_file_cstr(const char *file_name)
     file.read(data, file_size);
 
     if(!file) {
-	logger.log_error("Error reading file '%s'. Only %d could be read.\n", file_name, file.gcount());
+	logger.log_error("Error reading file '%s'. Only %d could be read.", file_name, file.gcount());
 	return {nullptr, 0};
     }
     
@@ -211,9 +211,13 @@ std::vector<Plot_Data*> parse_numeric_csv_file(const std::string& file_name)
 {
     std::vector<Plot_Data*> data_list;
     
-    auto load_result = parse_file_cstr(file_name.c_str());
-    char* p = load_result.first;
-    size_t file_size = load_result.second;
+    auto content = parse_file_cstr(file_name.c_str());
+    if (content.second == 0) {
+	return {};
+    }
+    
+    char* p = content.first;
+    size_t file_size = content.second;
      const char* p_end = p + file_size;
 
     size_t data_column = 0;

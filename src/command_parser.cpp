@@ -330,7 +330,7 @@ void op_binary_assign(Lexer& lexer, Command_Object object, Command_Operator op, 
 	    size_t new_obj_size = std::min(arg_unary.obj.plot_data->size(), arg_binary.obj.plot_data->size());
 	    object.obj.plot_data->y.resize(new_obj_size, 0);
 	    for (size_t ix = 0; ix < new_obj_size; ++ix) {
-		object.obj.plot_data->y.push_back(op_fun(arg_unary.obj.plot_data->y[ix], arg_binary.obj.plot_data->y[ix]));
+		object.obj.plot_data->y[ix] = op_fun(arg_unary.obj.plot_data->y[ix], arg_binary.obj.plot_data->y[ix]);
 	    }
 	    object.obj.plot_data->x = arg_unary.obj.plot_data->x;
 	}

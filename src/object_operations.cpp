@@ -113,6 +113,9 @@ void run_command_file(Data_Manager& data_manager, std::string file_name)
     file_name = SCRIPT_DIRECTORY + file_name + SCRIPT_FILE_TYPE;
 
     auto content = parse_file_cstr(file_name.c_str());
+    if (content.second == 0) {
+	return;
+    }
     std::string file = content.first;
 
     logger.log_info("Running script '%s'\n", file_name.c_str());
