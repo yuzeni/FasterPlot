@@ -3,19 +3,20 @@
 #include "data_manager.hpp"
 #include "app_loop.hpp"
 #include "function_parsing.hpp"
+#include "raylib.h"
 #include "utils.hpp"
+#include <cmath>
 #include <string>
 
-static void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vector<double*>& param_list, std::vector<double>& param_change_rate, int iterations);
+static void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vector<double*>& param_list, int iterations);
 
-void Function::get_all_param_ref_and_fit_change_rate(std::vector<double*>& param_list, std::vector<double>& param_change_rate)
+void Function::get_all_param_ref(std::vector<double*>& param_list)
 {
     int param_idx = 0;
     double* param_ref = get_parameter_ref(param_idx);
     while(param_ref)
     {
 	param_list.push_back(param_ref);
-	param_change_rate.push_back(get_fit_parameter_change_rate(param_idx));
 	
 	param_idx++;
 	param_ref = get_parameter_ref(param_idx);
@@ -68,23 +69,12 @@ int Sinusoidal_Function::get_parameter_idx(std::string_view name)
     return -1;
 }
 
-void Sinusoidal_Function::fit_to_data(Plot_Data *plot_data, int iterations, std::vector<double *> &param_list, std::vector<double> &param_change_rate, bool warm_start)
+void Sinusoidal_Function::fit_to_data(Plot_Data *plot_data, int iterations, std::vector<double *> &param_list, bool warm_start)
 {
     if (warm_start) {
 	sinusoid_fit_approximation(plot_data);
     }
-    function_fit_iterative_naive(plot_data, *this, param_list, param_change_rate, iterations);
-}
-
-double Sinusoidal_Function::get_fit_parameter_change_rate(int idx)
-{
-    switch(idx) {
-    case 0: return 1;
-    case 1: return 1;
-    case 2: return 0.00001;
-    case 3: return 1;
-    default: return 0;
-    }
+    function_fit_iterative_naive(plot_data, *this, param_list, iterations);
 }
 
 double* Sinusoidal_Function::get_parameter_ref(int idx)
@@ -424,21 +414,12 @@ int Linear_Function::get_parameter_idx(std::string_view name)
     return -1;
 }
 
-void Linear_Function::fit_to_data(Plot_Data *plot_data, int iterations, std::vector<double *> &param_list, std::vector<double> &param_change_rate, bool warm_start)
+void Linear_Function::fit_to_data(Plot_Data *plot_data, int iterations, std::vector<double *> &param_list, bool warm_start)
 {
     if (warm_start) {
 	linear_fit_approximation(plot_data);
     }
-    function_fit_iterative_naive(plot_data, *this, param_list, param_change_rate, iterations);
-}
-
-double Linear_Function::get_fit_parameter_change_rate(int idx)
-{
-    switch(idx) {
-    case 0: return 0.0000001;
-    case 1: return 1;
-    default: return 0;
-    }
+    function_fit_iterative_naive(plot_data, *this, param_list, iterations);
 }
 
 double* Linear_Function::get_parameter_ref(int idx)
@@ -503,16 +484,12 @@ int Generic_Function::get_parameter_idx(std::string_view name)
     return -1;
 }
 
-void Generic_Function::fit_to_data(Plot_Data *plot_data, int iterations, std::vector<double *> &param_list, std::vector<double> &param_change_rate, [[maybe_unused]] bool warm_start)
+void Generic_Function::fit_to_data(Plot_Data *plot_data, int iterations, std::vector<double *> &param_list, [[maybe_unused]] bool warm_start)
 {
-    function_fit_iterative_naive(plot_data, *this, param_list, param_change_rate, iterations);
-}
-
-// TODO improve this, find some algorithm for determining the learning rate based on the structure of the 'op_tree'
-double Generic_Function::get_fit_parameter_change_rate(int idx)
-{
-    
-    return 1;
+    if (warm_start) {
+	generic_fit_approximation(plot_data);
+    }
+    function_fit_iterative_naive(plot_data, *this, param_list, iterations);
 }
 
 double* Generic_Function::get_parameter_ref(int idx)
@@ -523,6 +500,11 @@ double* Generic_Function::get_parameter_ref(int idx)
     else {
 	return nullptr;
     }
+}
+
+void Generic_Function::generic_fit_approximation(Plot_Data *data)
+{
+    
 }
 
 /* Function Type Independents **************************/
@@ -555,15 +537,15 @@ static double squared_error_derivative(Plot_Data* data, double *param, Function&
     return (squared_error_yb - squared_error_ya) / delta_x;
 }
 
-static void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vector<double*>& param_list, std::vector<double>& param_change_rate, int iterations)
+static void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vector<double*>& param_list, int iterations)
 {
     logger.log_info("Error before iterative optimization: %f\n", squared_error(data, function));
-    const double learning_rate = 0.1;
     
     std::vector<double> derivatives(param_list.size(), 0);
+    std::vector<double> step_sizes(param_list.size(), 0.00001);
 
     double time_begin = GetTime();
-    // double time_begin_begin = time_begin;
+    double time_begin_begin = time_begin;
 
     for (int i = 0; i < iterations; ++i)
     {
@@ -576,10 +558,49 @@ static void function_fit_iterative_naive(Plot_Data *data, Function &function, st
 	    derivatives[i] = squared_error_derivative(data, param_list[i], function);
 	}
 
-	for (size_t i = 0; i < param_list.size(); ++i) {
-	    *param_list[i] -= derivatives[i] * learning_rate * param_change_rate[i];
+	// searching for the best 
+	for (size_t i = 0; i < param_list.size(); ++i)
+	{
+	    double orig_param = *param_list[i];
+	    double best_error = squared_error(data, function);
+	    bool converged = true;
+	    
+	    double best_step_size = step_sizes[i];
+	    for (double step_size = best_step_size * 100; step_size >= best_step_size * 0.001 && step_size > 10e-15; step_size *= 0.1)
+	    {
+		*param_list[i] -= derivatives[i] * step_size;
+		
+		double this_error = squared_error(data, function);
+		if (best_error > this_error) {
+		    converged = false;
+		    best_error = this_error;
+		    best_step_size = step_size;
+		}
+		
+		*param_list[i] = orig_param;
+	    }
+
+	    if (!converged) {
+		*param_list[i] -= derivatives[i] * best_step_size;
+		step_sizes[i] = best_step_size;
+	    }
+	    else {
+		step_sizes[i] = best_step_size * 0.001;
+	    }
 	}
+
+	bool all_converged = true;
+	for (size_t i = 0; i < param_list.size(); ++i) {
+	    if (step_sizes[i] > 10e-14) {
+		all_converged = false;
+	    }
+	}
+	if (all_converged) {
+	    logger.log_info("Converged at iteration: %d\n", i);
+	    break;
+	}
+	    
     }
     logger.log_info("Error after iterative optimization: %f\n", squared_error(data, function));
-    // logger.log_info("Elapsed time: %f s\n", GetTime() - time_begin_begin);
+    logger.log_info("Elapsed time: %f s\n", GetTime() - time_begin_begin);
 }

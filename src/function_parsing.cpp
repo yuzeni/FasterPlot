@@ -5,7 +5,6 @@
 
 #include "functions.hpp"
 #include "lexer.hpp"
-#include "utils.hpp"
 
 /* Parsing **************************/
 
@@ -19,7 +18,7 @@ Op_Tree_Node *parse_expression(Lexer &lexer, Generic_Function& generic_function,
     if(lexer.tkn(0).type == tkn_eof || !left) {
 	goto exit;
     }
-
+    
     tkn_sema = tkn_semantics_table[lexer.tkn(0).type];
     while(rbp < tkn_sema.lbp )
     {
@@ -52,10 +51,18 @@ Op_Tree_Node *nud_ident(NUD_ARGS)
 {
     Op_Tree_Node* node = new Op_Tree_Node{lexer.tkn(0)};
     ++lexer.tkn_idx;
-    generic_function.params.push_back({ .val = std::numeric_limits<double>().quiet_NaN(),
-	                                .name = std::string(node->tkn.sv),
-					.fit_change_rate = 1 });
-    node->param_idx = generic_function.params.size() - 1;
+    
+    int param_idx = generic_function.get_parameter_idx(node->tkn.sv);
+    if (param_idx == -1) {
+	generic_function.params.push_back({ .val = std::numeric_limits<double>().quiet_NaN(),
+		.name = std::string(node->tkn.sv),
+		.fit_change_rate = 1 });
+	node->param_idx = generic_function.params.size() - 1;
+    }
+    else {
+	node->param_idx = param_idx;
+    }
+    
     return node;
 }
 

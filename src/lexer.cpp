@@ -289,12 +289,14 @@ bool Lexer::get_next_token()
 	    ++p;
 	}
 	if (has_point || has_exp) {
+	    errno = 0;
 	    double number = strtod(begin, &p);
 	    if(errno == ERANGE)
 		logger.log_error("parsed number was out of range");
 	    return push(Token{tkn_real, begin, p, &number});
 	}
 	else {
+	    errno = 0;
 	    int64_t number = strtoll(begin, &p, 0);
 	    if(errno == ERANGE)
 		logger.log_error("parsed number was out of range");

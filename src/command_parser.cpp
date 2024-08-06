@@ -490,9 +490,8 @@ void op_fit_assign(Lexer &lexer, Command_Object object, Command_Operator op, Com
     }
 
     std::vector<double*> param_list;
-    std::vector<double> param_change_rate;
-    object.obj.function->get_all_param_ref_and_fit_change_rate(param_list, param_change_rate);
-    object.obj.function->fit_to_data(arg_binary.obj.plot_data, lexer.tkn(0).i, param_list, param_change_rate);
+    object.obj.function->get_all_param_ref(param_list);
+    object.obj.function->fit_to_data(arg_binary.obj.plot_data, lexer.tkn(0).i, param_list);
 }
 
 void op_extrema_assign(Lexer &lexer, Data_Manager &data_manager, Command_Object object, [[maybe_unused]] Command_Operator op, Command_Object arg_unary)
@@ -1112,7 +1111,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	    goto exit;
 	
 	if (arg_unary.type != OT_function) {
-	    lexer.parsing_error(object.tkn, "Expected function, but got '%s'.", object_type_name_table[object.type]);
+	    lexer.parsing_error(arg_unary.tkn, "Expected function, but got '%s'.", object_type_name_table[object.type]);
 	    goto exit;
 	}
 
@@ -1133,28 +1132,26 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	    goto exit;
 	}
 	++lexer.tkn_idx;
-	int iterations = lexer.tkn(0).i;
+	int iterations = lexer.tkn().i;
 
 	std::vector<double*> param_list;
-	std::vector<double> param_change_rate;
 
 	while(lexer.tkn(1).type == tkn_ident)
 	{
 	    ++lexer.tkn_idx;
-	    int param_idx = arg_unary.obj.function->get_parameter_idx(lexer.tkn(0).sv);
+	    int param_idx = arg_unary.obj.function->get_parameter_idx(lexer.tkn().sv);
 	    if (param_idx < 0) {
-		lexer.parsing_error(lexer.tkn(0), "This parameter does not exist.");
+		lexer.parsing_error(lexer.tkn(), "This parameter does not exist.");
 	    }
 	    
 	    param_list.push_back(arg_unary.obj.function->get_parameter_ref(param_idx));
-	    param_change_rate.push_back(arg_unary.obj.function->get_fit_parameter_change_rate(param_idx));
 	}
 
 	if (param_list.empty()) {
-	    arg_unary.obj.function->get_all_param_ref_and_fit_change_rate(param_list, param_change_rate);
+	    arg_unary.obj.function->get_all_param_ref(param_list);
 	}
 
-	arg_unary.obj.function->fit_to_data(arg_binary.obj.plot_data, iterations, param_list, param_change_rate, false);
+	arg_unary.obj.function->fit_to_data(arg_binary.obj.plot_data, iterations, param_list, false);
 	goto exit;
     }
 
@@ -1169,6 +1166,11 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	goto exit;
 
     op = get_command_operator(lexer.tkn());
+    if (op.type == OP_undefined) {
+	lexer.parsing_error(op.tkn, "Expected an operator.");
+	goto exit;
+    }
+    
     if (get_command_operator(lexer.tkn(1)).type != OP_undefined) {
 	if (!expect_next_token(lexer))
 	    goto exit;

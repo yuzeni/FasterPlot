@@ -20,12 +20,13 @@ struct Op_Tree_Node
 struct Function_Op_Tree
 {
     Op_Tree_Node *base_node = nullptr;
-    
+
     double evaluate(const Generic_Function& generic_function, double x) const;
     std::string get_string_no_value(const Generic_Function& generic_function) const;
     std::string get_string_value(const Generic_Function& generic_function) const;
 
 private:
+    
     double evaluate_node(const Generic_Function& generic_function, double x, Op_Tree_Node* node) const;
     void stringify_op_tree(const Generic_Function& generic_function, std::string &str,
 			   Op_Tree_Node* node, bool show_values) const;

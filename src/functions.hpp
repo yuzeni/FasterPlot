@@ -16,15 +16,14 @@ public:
     virtual ~Function(){};
 
     void update_content_tree_element(size_t index);
-    void get_all_param_ref_and_fit_change_rate(std::vector<double*>& param_list, std::vector<double>& param_change_rate);
+    void get_all_param_ref(std::vector<double*>& param_list);
     
     virtual double operator()(double x) const = 0;
     virtual std::string get_string_value() const = 0;
     virtual std::string get_string_no_value() const = 0;
     virtual double* get_parameter_ref(std::string_view name) = 0;
     virtual int get_parameter_idx(std::string_view name) = 0;
-    virtual void fit_to_data(Plot_Data* plot_data, int iterations, std::vector<double*>& param_list, std::vector<double>& param_change_rate, bool warm_start = true) = 0;
-    virtual double get_fit_parameter_change_rate(int idx) = 0;
+    virtual void fit_to_data(Plot_Data* plot_data, int iterations, std::vector<double*>& param_list, bool warm_start = true) = 0;
     virtual double* get_parameter_ref(int idx) = 0;
 };
 
@@ -43,8 +42,7 @@ public:
     std::string get_string_no_value() const override;
     double* get_parameter_ref(std::string_view name) override;
     int get_parameter_idx(std::string_view name) override;
-    void fit_to_data(Plot_Data* plot_data, int iterations, std::vector<double*>& param_list, std::vector<double>& param_change_rate, bool warm_start = true) override;
-    double get_fit_parameter_change_rate(int idx) override;
+    void fit_to_data(Plot_Data* plot_data, int iterations, std::vector<double*>& param_list, bool warm_start = true) override;
     double* get_parameter_ref(int idx) override;
     
 private:
@@ -66,8 +64,7 @@ public:
     std::string get_string_no_value() const override;
     double *get_parameter_ref(std::string_view name) override;
     int get_parameter_idx(std::string_view name) override;
-    void fit_to_data(Plot_Data *plot_data, int iterations, std::vector<double *> &param_list, std::vector<double> &param_change_rate, bool warm_start = true) override;
-    double get_fit_parameter_change_rate(int idx) override;
+    void fit_to_data(Plot_Data *plot_data, int iterations, std::vector<double *> &param_list, bool warm_start = true) override;
     double *get_parameter_ref(int idx) override;
 
   private:
@@ -97,7 +94,10 @@ public:
     std::string get_string_no_value() const override { return op_tree.get_string_no_value(*this); }
     double* get_parameter_ref(std::string_view name) override;
     int get_parameter_idx(std::string_view name) override;
-    void fit_to_data(Plot_Data* plot_data, int iterations, std::vector<double*>& param_list, std::vector<double>& param_change_rate, bool warm_start = true) override;
-    double get_fit_parameter_change_rate(int idx) override;
+    void fit_to_data(Plot_Data* plot_data, int iterations, std::vector<double*>& param_list, bool warm_start = true) override;
     double* get_parameter_ref(int idx) override;
+
+private:
+
+    void generic_fit_approximation(Plot_Data *data);
 };
