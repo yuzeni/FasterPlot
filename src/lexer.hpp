@@ -51,6 +51,21 @@ enum Token_enum : uint32_t {
     tkn_zero,
     tkn_help,
 
+    tkn_sin, // math keywords
+    tkn_cos,
+    tkn_tan,
+    tkn_asin,
+    tkn_acos,
+    tkn_atan,
+    tkn_sinh,
+    tkn_cosh,
+    tkn_tanh,
+    tkn_asinh,
+    tkn_acosh,
+    tkn_atanh,
+    tkn_pi,
+    tkn_euler,
+
     /* mutliple char operators */
     tkn_update_add,
     tkn_update_sub,

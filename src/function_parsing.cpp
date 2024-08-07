@@ -5,14 +5,21 @@
 
 #include "functions.hpp"
 #include "lexer.hpp"
+#include "utils.hpp"
 
 /* Parsing **************************/
 
 // call only on a unary op or argument
 Op_Tree_Node *parse_expression(Lexer &lexer, Generic_Function& generic_function, int rbp)
 {
-    Semantic_code tkn_sema = tkn_semantics_table[lexer.tkn(0).type];
     Op_Tree_Node* left = nullptr;
+    Semantic_code tkn_sema;
+    
+    if (lexer.tkn(0).type == tkn_eof) {
+	goto exit;
+    }
+    
+    tkn_sema = tkn_semantics_table[lexer.tkn(0).type];
     left = tkn_sema.nud(lexer.tkn(0).type, lexer, nullptr, generic_function);
     
     if(lexer.tkn(0).type == tkn_eof || !left) {
@@ -26,7 +33,7 @@ Op_Tree_Node *parse_expression(Lexer &lexer, Generic_Function& generic_function,
 	new_left = tkn_sema.led(lexer.tkn(0).type, lexer, left, generic_function);
 	left = new_left;
 	
-	if(lexer.tkn(0).type == tkn_eof) {
+	if(lexer.tkn(0).type == tkn_eof || !left) {
 	    goto exit;
 	}
 	
@@ -101,7 +108,7 @@ Op_Tree_Node *nud_parenthesis(NUD_ARGS)
 {
     ++lexer.tkn_idx;
     Op_Tree_Node* content = parse_expression(lexer, generic_function);
-    if (lexer.tkn(0).type != tkn_eof) {
+    if (content) {
 	++lexer.tkn_idx;
 	return content;
     }
@@ -205,15 +212,16 @@ void Function_Op_Tree::stringify_op_tree(const Generic_Function& generic_functio
 
 double Function_Op_Tree::evaluate_node(const Generic_Function& generic_function, double x, Op_Tree_Node* node) const
 {
-    Semantic_code tkn_sema = tkn_semantics_table[node->tkn.type];
+    if (node) {
+	Semantic_code tkn_sema = tkn_semantics_table[node->tkn.type];
     
-    if (node->left && node->right) {
-	return tkn_sema.exe_led(evaluate_node(generic_function, x, node->left), evaluate_node(generic_function, x, node->right));
-    }
-    else if (node->left || node->right) {
-	return tkn_sema.exe_nud(evaluate_node(generic_function, x, node->left), evaluate_node(generic_function, x, node->right));
-    }
-    else {
+	if (node->left && node->right) {
+	    return tkn_sema.exe_led(evaluate_node(generic_function, x, node->left), evaluate_node(generic_function, x, node->right));
+	}
+	else if (node->left || node->right) {
+	    return tkn_sema.exe_nud(evaluate_node(generic_function, x, node->left), evaluate_node(generic_function, x, node->right));
+	}
+	
 	switch(node->tkn.type) {
 	case tkn_int:
 	case tkn_real:
@@ -226,10 +234,16 @@ double Function_Op_Tree::evaluate_node(const Generic_Function& generic_function,
 	    return 1;
 	case tkn_false:
 	    return 0;
+	case tkn_pi:
+	    return UTILS_PI;
+	case tkn_euler:
+	    return UTILS_EULER;
 	default:
-	    return std::numeric_limits<double>().quiet_NaN();
+	    break;
 	}
     }
+    
+    return std::numeric_limits<double>().quiet_NaN();
 }
 
 double Function_Op_Tree::evaluate(const Generic_Function& generic_function, double x) const

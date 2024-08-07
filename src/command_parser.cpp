@@ -310,7 +310,7 @@ static Command_Operator get_command_operator(Token tkn)
     return op;
 }
 
-void op_binary_assign(Lexer& lexer, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary, double (*op_fun)(double, double))
+void op_binary_assign(Lexer& lexer, Command_Object& object, Command_Operator& op, Command_Object& arg_unary, Command_Object& arg_binary, double (*op_fun)(double, double))
 {
     switch(object.type) {
     case OT_plot_data:
@@ -393,7 +393,7 @@ void op_binary_assign(Lexer& lexer, Command_Object object, Command_Operator op, 
 
 }
 
-void op_unary_assign(Lexer& lexer, Command_Object object, Command_Object arg_unary)
+void op_unary_assign(Lexer& lexer, Command_Object& object, Command_Object& arg_unary)
 {
     switch(object.type) {
     case OT_plot_data:
@@ -406,20 +406,20 @@ void op_unary_assign(Lexer& lexer, Command_Object object, Command_Object arg_una
     case OT_function:
 	switch(arg_unary.type) {
 	case OT_function:
-	    object.obj.function = arg_unary.obj.function;
+	    lexer.parsing_error(arg_unary.tkn, "Can't assign a function to another function.");
 	    return;
 	case OT_token:
 	    switch (arg_unary.tkn.type) {
 	    case tkn_sinusoid:
-		data_manager.change_function_type(object.obj.function, new Sinusoidal_Function);
+		object.obj.function = data_manager.change_function_type(object.obj.function, new Sinusoidal_Function);
 		return;
 	    case tkn_linear:
-		data_manager.change_function_type(object.obj.function, new Linear_Function);
+		object.obj.function = data_manager.change_function_type(object.obj.function, new Linear_Function);
 		return;
 	    case tkn_y:
 		if (lexer.tkn(0).type == '=') {
 		    ++lexer.tkn_idx;
-		    data_manager.change_function_type(object.obj.function, new Generic_Function{lexer});
+		    object.obj.function = data_manager.change_function_type(object.obj.function, new Generic_Function{lexer});
 		}
 		else {
 		    lexer.parsing_error(lexer.tkn(0), "Expected a generic function declaration.");
@@ -454,7 +454,7 @@ void op_unary_assign(Lexer& lexer, Command_Object object, Command_Object arg_una
     }
 }
 
-void op_fit_assign(Lexer &lexer, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary)
+void op_fit_assign(Lexer &lexer, Command_Object& object, Command_Operator& op, Command_Object& arg_unary, Command_Object& arg_binary)
 {
 
     if (object.type != OT_function) {
@@ -494,7 +494,7 @@ void op_fit_assign(Lexer &lexer, Command_Object object, Command_Operator op, Com
     object.obj.function->fit_to_data(arg_binary.obj.plot_data, lexer.tkn(0).i, param_list);
 }
 
-void op_extrema_assign(Lexer &lexer, Data_Manager &data_manager, Command_Object object, [[maybe_unused]] Command_Operator op, Command_Object arg_unary)
+void op_extrema_assign(Lexer &lexer, Data_Manager &data_manager, Command_Object& object, [[maybe_unused]] Command_Operator& op, Command_Object& arg_unary)
 {
 
     if (object.type != OT_plot_data) {
@@ -514,7 +514,7 @@ void op_extrema_assign(Lexer &lexer, Data_Manager &data_manager, Command_Object 
     get_extrema_plot_data(object.obj.plot_data, arg_unary.obj.plot_data);
 }
 
-void execute_assign_operation(Lexer &lexer, Data_Manager &data_manager, Command_Object object, Command_Operator op, Command_Object arg_unary, Command_Object arg_binary)
+void execute_assign_operation(Lexer &lexer, Data_Manager &data_manager, Command_Object& object, Command_Operator& op, Command_Object& arg_unary, Command_Object& arg_binary)
 {
     switch(op.type) {
     case OP_add:
@@ -553,7 +553,7 @@ void execute_assign_operation(Lexer &lexer, Data_Manager &data_manager, Command_
     }
 }
 
-double op_binary_value(Command_Object arg_unary, Command_Object arg_binary, double (*op_fun)(double, double), Lexer& lexer)
+double op_binary_value(Command_Object& arg_unary, Command_Object& arg_binary, double (*op_fun)(double, double), Lexer& lexer)
 {
 
     double unary_val;
@@ -583,7 +583,7 @@ double op_binary_value(Command_Object arg_unary, Command_Object arg_binary, doub
     return op_fun(unary_val, binary_val);
 }
 
-static double execute_operation_value(Command_Operator op, Command_Object arg_unary, Command_Object arg_binary, Lexer &lexer)
+static double execute_operation_value(Command_Operator& op, Command_Object& arg_unary, Command_Object& arg_binary, Lexer &lexer)
 {
 
     switch(op.type) {
@@ -605,7 +605,7 @@ static double execute_operation_value(Command_Operator op, Command_Object arg_un
     }
 }
 
-static void print_unary(Command_Object arg_unary, Lexer& lexer)
+static void print_unary(Command_Object& arg_unary, Lexer& lexer)
 {
     switch(arg_unary.type) {
     case OT_value:
@@ -620,7 +620,7 @@ static void print_unary(Command_Object arg_unary, Lexer& lexer)
     }
 }
 
-static void print_op_binary(Command_Operator op, Command_Object arg_unary, Command_Object arg_binary, Lexer& lexer)
+static void print_op_binary(Command_Operator& op, Command_Object& arg_unary, Command_Object& arg_binary, Lexer& lexer)
 {
     logger.log_info("%f\n", execute_operation_value(op, arg_unary, arg_binary, lexer));
 }

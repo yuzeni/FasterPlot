@@ -10,6 +10,15 @@ class Generic_Function;
 struct Op_Tree_Node
 {
     Op_Tree_Node(Token tkn) : tkn(tkn) {}
+    ~Op_Tree_Node()
+     {
+	if (left) {
+	    delete left;
+	}
+	if (right) {
+	    delete right;
+	}
+    }
     Token tkn;
     Op_Tree_Node *left = nullptr;
     Op_Tree_Node *right = nullptr;
@@ -76,7 +85,19 @@ inline double exe_sub_unary(EXE_ARGS)  { return -right; }
 inline double exe_mul(EXE_ARGS)        { return left * right; }
 inline double exe_div(EXE_ARGS)        { return left / right; }
 inline double exe_pow(EXE_ARGS)        { return std::pow(left, right); }
-inline double exe_not(EXE_ARGS)        { return !right; } 
+inline double exe_not(EXE_ARGS)        { return !right; }
+inline double exe_sin(EXE_ARGS)        { return std::sin(right); }
+inline double exe_cos(EXE_ARGS)        { return std::cos(right); }
+inline double exe_tan(EXE_ARGS)        { return std::tan(right); }
+inline double exe_asin(EXE_ARGS)       { return std::asin(right); }
+inline double exe_acos(EXE_ARGS)       { return std::acos(right); }
+inline double exe_atan(EXE_ARGS)       { return std::atan(right); }
+inline double exe_sinh(EXE_ARGS)       { return std::sinh(right); }
+inline double exe_cosh(EXE_ARGS)       { return std::cosh(right); }
+inline double exe_tanh(EXE_ARGS)       { return std::tanh(right); }
+inline double exe_asinh(EXE_ARGS)      { return std::asinh(right); }
+inline double exe_acosh(EXE_ARGS)      { return std::acosh(right); }
+inline double exe_atanh(EXE_ARGS)      { return std::atanh(right); }
 
 struct Semantic_code {
     int lbp = 0; // left-binding-power
@@ -107,6 +128,8 @@ consteval std::array<Semantic_code, tkn_SIZE> get_tkn_semantics_table()
     table[tkn_false]       = {0, 0, led_error, nud_arg };
     table[tkn_x]           = {0, 0, led_error, nud_arg };
     table[tkn_y]           = {0, 0, led_error, nud_arg };
+    table[tkn_pi]          = {0, 0, led_error, nud_arg };
+    table[tkn_euler]       = {0, 0, led_error, nud_arg };
 
     /* set operations */
     table['=']             = {6, 6,   led_normal, nud_error };
@@ -124,7 +147,20 @@ consteval std::array<Semantic_code, tkn_SIZE> get_tkn_semantics_table()
     table['/']             = {11, 11, led_normal, nud_error, exe_div};
     table[tkn_pow]         = {13, 12, led_normal, nud_error, exe_pow};
     table['!']             = {0, 14,  led_error,  nud_right, exe_error, exe_not};
+    table[tkn_sin]         = {0, 15,  led_error,  nud_right, exe_error, exe_sin};
+    table[tkn_cos]         = {0, 15,  led_error,  nud_right, exe_error, exe_cos};
+    table[tkn_tan]         = {0, 15,  led_error,  nud_right, exe_error, exe_tan};
+    table[tkn_asin]        = {0, 15,  led_error,  nud_right, exe_error, exe_asin};
+    table[tkn_acos]        = {0, 15,  led_error,  nud_right, exe_error, exe_acos};
+    table[tkn_atan]        = {0, 15,  led_error,  nud_right, exe_error, exe_atan};
+    table[tkn_sinh]        = {0, 15,  led_error,  nud_right, exe_error, exe_sinh};
+    table[tkn_cosh]        = {0, 15,  led_error,  nud_right, exe_error, exe_cosh};
+    table[tkn_tanh]        = {0, 15,  led_error,  nud_right, exe_error, exe_tanh};
+    table[tkn_asinh]       = {0, 15,  led_error,  nud_right, exe_error, exe_asinh};
+    table[tkn_acosh]       = {0, 15,  led_error,  nud_right, exe_error, exe_acosh};
+    table[tkn_atanh]       = {0, 15,  led_error,  nud_right, exe_error, exe_atanh};
 
+    
     /* grouping */
     table['(']             = {15, 0, led_error, nud_parenthesis};
     table[')']             = {0, 0,  led_error, nud_delimiter};
@@ -135,4 +171,3 @@ consteval std::array<Semantic_code, tkn_SIZE> get_tkn_semantics_table()
 inline constexpr auto tkn_semantics_table = get_tkn_semantics_table();
 
 Op_Tree_Node *parse_expression(Lexer &lexer, Generic_Function &generic_function, int rbp = 0);
-

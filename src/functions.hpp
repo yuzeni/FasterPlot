@@ -13,8 +13,8 @@ public:
     Plot_Data* fit_from_data = nullptr;
     size_t index = 0;
 
-    virtual ~Function(){};
-
+    virtual ~Function() {};
+    
     void update_content_tree_element(size_t index);
     void get_all_param_ref(std::vector<double*>& param_list);
     

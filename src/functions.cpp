@@ -3,6 +3,7 @@
 #include "data_manager.hpp"
 #include "app_loop.hpp"
 #include "function_parsing.hpp"
+#include "global_vars.hpp"
 #include "raylib.h"
 #include "utils.hpp"
 #include <cmath>
@@ -461,7 +462,15 @@ void Linear_Function::linear_fit_approximation(Plot_Data *data)
 
 Generic_Function::Generic_Function(Lexer& lexer)
 {
+    size_t error_cnt = logger.error_cnt;
+    
     op_tree.base_node = parse_expression(lexer, *this);
+    
+    if (error_cnt != logger.error_cnt) {
+	delete op_tree.base_node;
+	op_tree.base_node = nullptr;
+	params.clear();
+    }
 }
 
 double* Generic_Function::get_parameter_ref(std::string_view name)
@@ -542,7 +551,7 @@ static void function_fit_iterative_naive(Plot_Data *data, Function &function, st
     logger.log_info("Error before iterative optimization: %f\n", squared_error(data, function));
     
     std::vector<double> derivatives(param_list.size(), 0);
-    std::vector<double> step_sizes(param_list.size(), 0.00001);
+    std::vector<double> step_sizes(param_list.size(), 0.000001);
 
     double time_begin = GetTime();
     double time_begin_begin = time_begin;

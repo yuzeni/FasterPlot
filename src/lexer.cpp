@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <iostream>
 #include <string>
 #include <vector>
 #include <optional>
@@ -47,6 +46,21 @@ static const char *token_name_table[tkn_SIZE - 256]{
     "save",
     "zero",
     "help",
+
+    "sin",
+    "cos",
+    "tan",
+    "asin",
+    "acos",
+    "atan",
+    "sinh",
+    "cosh",
+    "tanh",
+    "asinh",
+    "acosh",
+    "atanh",
+    "pi",
+    "euler",
     
     "+=",
     "-=",
@@ -110,6 +124,21 @@ Token_enum keyword_compare(const std::string_view sv)
     case cte_hash_c_str("save"): return tkn_save;
     case cte_hash_c_str("zero"): return tkn_zero;
     case cte_hash_c_str("help"): return tkn_help;
+	
+    case cte_hash_c_str("sin"): return tkn_sin;
+    case cte_hash_c_str("cos"): return tkn_cos;
+    case cte_hash_c_str("tan"): return tkn_tan;
+    case cte_hash_c_str("asin"): return tkn_asin;
+    case cte_hash_c_str("acos"): return tkn_acos;
+    case cte_hash_c_str("atan"): return tkn_atan;
+    case cte_hash_c_str("sinh"): return tkn_sinh;
+    case cte_hash_c_str("cosh"): return tkn_cosh;
+    case cte_hash_c_str("tanh"): return tkn_tanh;
+    case cte_hash_c_str("asinh"): return tkn_asinh;
+    case cte_hash_c_str("acosh"): return tkn_acosh;
+    case cte_hash_c_str("atanh"): return tkn_atanh;
+    case cte_hash_c_str("pi"): return tkn_pi;
+    case cte_hash_c_str("euler"): return tkn_euler;
     default: return tkn_ident;
     }
 }
@@ -426,7 +455,7 @@ void Lexer::log_token(Token &tkn) const
 	color = UTILS_BLUE;
     else if (tkn.type == tkn_iterator)
 	color = UTILS_MAGENTA;
-    else if (tkn.type >= tkn_fit && tkn.type <= tkn_help)
+    else if (tkn.type >= tkn_fit && tkn.type <= tkn_euler)
 	color = UTILS_BRIGHT_RED;
     else
 	color = UTILS_WHITE;
