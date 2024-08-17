@@ -11,8 +11,7 @@
 
 struct Data_Manager;
 
-bool handle_dropped_files(Data_Manager &data_manager);
-
+bool handle_dropped_files();
 
 enum Plot_Type
 {
@@ -78,13 +77,9 @@ private:
 
 struct Text_Input
 {
-    Text_Input() : keyboard_lock_id(get_uuid()) {
-	// input_active = true;
-	// lexer.get_input() = "type help in here";
-	// lexer.tokenize();
-    }
+    Text_Input() : keyboard_lock_id(get_uuid()) {}
     void draw();
-    void update(Data_Manager& data_manger);
+    void update();
     
 private:
 

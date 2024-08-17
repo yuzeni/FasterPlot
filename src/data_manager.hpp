@@ -93,7 +93,8 @@ struct Data_Manager
     VP_Camera camera;
     const Vec2<int> plot_padding = {50, 50};
 
-    void update(Content_Tree& content_tree);
+    void update_viewport();
+    void update_content_tree(Content_Tree& content_tree);
     void draw();
     void load_external_plot_data(const std::string& file_name);
     Plot_Data* new_plot_data(Plot_Data* data = nullptr);
@@ -110,10 +111,28 @@ struct Data_Manager
     void revert_command();
     void revert_reverting();
     
+    void update_value_data(size_t data_idx, size_t value_idx, double value)
+    {
+	if (data_idx < plot_data.size()) {
+	    plot_data[data_idx]->y.at(value_idx) = value;
+	}
+    }
+    
+    void resize_data(size_t data_idx, size_t size, double fill_value)
+    {
+	if (data_idx < plot_data.size()) {
+	    plot_data[data_idx]->y.resize(size, fill_value);
+	}
+    }
+    
+    void append_data(size_t data_idx, double value)
+    {
+	plot_data[data_idx]->y.push_back(value);
+    }
+    
 private:
 
     int graph_color_array_idx = 0;
-    // Content_Tree content_tree;
     const int key_board_lock_id;
 
     std::vector<Plot_Data*> original_plot_data;

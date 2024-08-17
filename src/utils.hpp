@@ -68,7 +68,7 @@ constexpr int LOG_OUTPUT_ERROR_MSG_SIZE = 1024;
 
 struct Logger {
 
-    void add_msg(Log_Msg log_msg) { log_msgs.push_back(log_msg); }
+    // void add_msg(Log_Msg log_msg) { log_msgs.push_back(log_msg); }
     
     template <typename... Args>
     void log_error(const char *msg, Args... args)
@@ -80,8 +80,8 @@ struct Logger {
 	}
 	else {
 	    printf(UTILS_ERROR_COLOR "ERROR:" UTILS_END_COLOR " %s\n", buffer);
-	    log_msgs.push_back({"ERROR: ", RED});
-	    log_msgs.push_back({buffer, BLACK});
+	    // log_msgs.push_back({"ERROR: ", RED});
+	    // log_msgs.push_back({buffer, BLACK});
 	}
 	++error_cnt;
     }
@@ -96,13 +96,13 @@ struct Logger {
 	}
 	else {
 	    printf("%s", buffer);
-	    log_msgs.push_back({buffer, BLACK});
+	    // log_msgs.push_back({buffer, BLACK});
 	}
     }
 
     void log_help_message();
 
-    std::vector<Log_Msg> log_msgs;
+    // std::vector<Log_Msg> log_msgs;
     size_t error_cnt = 0;
 };
 

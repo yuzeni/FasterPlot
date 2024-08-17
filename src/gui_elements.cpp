@@ -24,13 +24,14 @@ constexpr int TEXT_INPUT_FONT_SIZE = 20;
 constexpr float TEXT_INPUT_MIN_BOX_SIZE = 100;
 constexpr double TEXT_INPUT_CURSO_BLINK_TIME = 0.5; // in seconds
 
-bool handle_dropped_files(Data_Manager& data_manager) {
+bool handle_dropped_files()
+{
     if (IsFileDropped()) {
 	FilePathList path_list = LoadDroppedFiles();
 	for(uint32_t i = 0; i < path_list.count; ++i) {
 	    std::string file_extension = get_file_extension(path_list.paths[i]);
 	    if (file_extension == ".script") {
-		run_command_file_absolute_path(data_manager, std::string(path_list.paths[i]));
+		run_command_file_absolute_path(std::string(path_list.paths[i]));
 	    }
 	    else {
 		data_manager.load_external_plot_data(path_list.paths[i]);
@@ -116,7 +117,7 @@ bool Text_Input::keyboard_access()
     return g_keyboard_lock == 0 || g_keyboard_lock == keyboard_lock_id;
 }
 
-void Text_Input::update(Data_Manager& data_manager)
+void Text_Input::update()
 {
     if(!keyboard_access())
 	return;
@@ -196,7 +197,7 @@ void Text_Input::update(Data_Manager& data_manager)
 	}
     }
     else if (!input.empty()) {
-	handle_command(data_manager, lexer);
+	handle_command(lexer);
 	prev_cmd_idx = g_all_commands.get_index();
 	lexer = Lexer{};
     }

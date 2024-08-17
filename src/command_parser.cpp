@@ -1,4 +1,7 @@
- 
+
+// I really don't like this parser, but I'm also not going to escalate the
+// command interfacer into a full blown scripting language. So it will have to stay.
+
 #include "command_parser.hpp"
 
 #include <cstddef>
@@ -12,7 +15,7 @@
 #include "object_operations.hpp"
 #include "data_manager.hpp"
 
-void Command_Object::delete_new_object(Data_Manager& data_manager) {
+void Command_Object::delete_new_object() {
     if (new_object) {
 	switch(type) {
 	case OT_plot_data: data_manager.delete_plot_data(obj.plot_data); break;
@@ -31,7 +34,7 @@ static bool expect_next_token(Lexer &lexer)
     return true;
 }
 
-static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexer)
+static Command_Object get_command_object(Lexer &lexer)
 {
     Command_Object object;
     object.tkn = lexer.tkn();
@@ -42,9 +45,6 @@ static Command_Object get_command_object(Data_Manager &data_manager, Lexer &lexe
     case tkn_data:
 	if (!expect_next_token(lexer))
 	    return {};
-	if (lexer.tkn().type != tkn_new && lexer.tkn().type != tkn_int) {
-
-	}
 	object.type = OT_plot_data;
 	switch (lexer.tkn().type) {
 	case tkn_new:
@@ -306,6 +306,9 @@ static Command_Operator get_command_operator(Token tkn)
     case tkn_help:
 	op.type = OP_help;
 	break;
+    case tkn_new:
+	op.type = OP_new;
+	break;
     }
     return op;
 }
@@ -494,7 +497,7 @@ void op_fit_assign(Lexer &lexer, Command_Object& object, Command_Operator& op, C
     object.obj.function->fit_to_data(arg_binary.obj.plot_data, lexer.tkn(0).i, param_list);
 }
 
-void op_extrema_assign(Lexer &lexer, Data_Manager &data_manager, Command_Object& object, [[maybe_unused]] Command_Operator& op, Command_Object& arg_unary)
+void op_extrema_assign(Lexer &lexer, Command_Object& object, [[maybe_unused]] Command_Operator& op, Command_Object& arg_unary)
 {
 
     if (object.type != OT_plot_data) {
@@ -514,7 +517,7 @@ void op_extrema_assign(Lexer &lexer, Data_Manager &data_manager, Command_Object&
     get_extrema_plot_data(object.obj.plot_data, arg_unary.obj.plot_data);
 }
 
-void execute_assign_operation(Lexer &lexer, Data_Manager &data_manager, Command_Object& object, Command_Operator& op, Command_Object& arg_unary, Command_Object& arg_binary)
+void execute_assign_operation(Lexer &lexer, Command_Object& object, Command_Operator& op, Command_Object& arg_unary, Command_Object& arg_binary)
 {
     switch(op.type) {
     case OP_add:
@@ -548,7 +551,7 @@ void execute_assign_operation(Lexer &lexer, Data_Manager &data_manager, Command_
 	op_fit_assign(lexer, object, op, arg_unary, arg_binary);
 	break;
     case OP_extrema:
-	op_extrema_assign(lexer, data_manager, object, op, arg_unary);
+	op_extrema_assign(lexer, object, op, arg_unary);
 	break;
     }
 }
@@ -625,11 +628,11 @@ static void print_op_binary(Command_Operator& op, Command_Object& arg_unary, Com
     logger.log_info("%f\n", execute_operation_value(op, arg_unary, arg_binary, lexer));
 }
 
-static Command_Object expect_command_object(Data_Manager& data_manager, Lexer& lexer) {
+static Command_Object expect_command_object(Lexer& lexer) {
 
     if (!expect_next_token(lexer))
 	return {};
-    Command_Object arg = get_command_object(data_manager, lexer);
+    Command_Object arg = get_command_object(lexer);
     if (arg.is_undefined()) {
 	lexer.parsing_error(lexer.tkn(), "Expected an argument.");
 	return {};
@@ -651,7 +654,7 @@ static std::pair<size_t, size_t> expand_iterators(Data_Manager &data_manager, Le
 	    tkns.erase(tkns.begin() + tkn_idx);
 	    for (int64_t it : *(iterator.itr)) {
 		tkns.insert(tkns.begin() + tkn_idx, Token{tkn_int, iterator.ptr, iterator.ptr + iterator.size, &it});
-		iterator_error_size += size_t(!handle_command(data_manager, lexer, sub_level + 1));
+		iterator_error_size += size_t(!handle_command(lexer, sub_level + 1));
 		++iterator_size;
 		tkns.erase(tkns.begin() + tkn_idx);
 	    }
@@ -686,7 +689,7 @@ static bool check_newline(std::string &str, size_t idx)
     return check_and_skip_newline(str, idx);
 }
 
-void re_run_all_commands(Data_Manager &data_manager)
+void re_run_all_commands()
 {
     for (int64_t i = 0; i <= g_all_commands.get_index(); ++i) {
 	const Command& cmd = g_all_commands.get_commands()[i];
@@ -704,11 +707,11 @@ void re_run_all_commands(Data_Manager &data_manager)
 	    continue;
 	}
 		
-	handle_command(data_manager, lexer, 0, false);
+	handle_command(lexer, 0, false);
     }
 }
 
-void handle_command_file(Data_Manager &data_manager, std::string file)
+void handle_command_file(std::string file)
 {
     std::string cmd;
     size_t i = 0;
@@ -722,12 +725,12 @@ void handle_command_file(Data_Manager &data_manager, std::string file)
 	Lexer lexer;
 	lexer.get_input() = cmd;
 	lexer.tokenize();
-	handle_command(data_manager, lexer);
+	handle_command(lexer);
 	++i;
     }
 }
 
-bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, bool add_command)
+bool handle_command(Lexer& lexer, int sub_level, bool add_command)
 {
     size_t error_cnt = logger.error_cnt;
 
@@ -759,7 +762,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
     
     switch(op.type) {
     case OP_assign:
-	arg_unary = expect_command_object(data_manager, lexer);
+	arg_unary = expect_command_object(lexer);
 	if (arg_unary.is_undefined())
 	    goto exit;
 	    
@@ -771,7 +774,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	    goto exit;
 	}
 	else {
-	    arg_binary = expect_command_object(data_manager, lexer);
+	    arg_binary = expect_command_object(lexer);
 	    if (arg_binary.is_undefined())
 		goto exit;
 	    print_op_binary(op, arg_unary, arg_binary, lexer);
@@ -780,7 +783,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	
     case OP_smooth:
     case OP_interp:
-	arg_unary = expect_command_object(data_manager, lexer);
+	arg_unary = expect_command_object(lexer);
 	if (arg_unary.is_undefined())
 	    goto exit;
 
@@ -789,7 +792,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	    goto exit;
 	}
 	    
-	arg_binary = expect_command_object(data_manager, lexer);
+	arg_binary = expect_command_object(lexer);
 	if (arg_binary.is_undefined())
 	    goto exit;
 	if (arg_binary.tkn.type != tkn_int) {
@@ -803,14 +806,14 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 		lexer.parsing_error(op.tkn, "Error occured trying to smooth the data, perhaps X or Y were empty.");
 	}
 	else if (op.type == OP_interp) {
-	    if (!interp_plot_data(data_manager, arg_unary.obj.plot_data, arg_binary.tkn.i))
+	    if (!interp_plot_data(arg_unary.obj.plot_data, arg_binary.tkn.i))
 		lexer.parsing_error(op.tkn, "Error occured trying to interpolate the data, perhaps X or Y were empty.");
 	}
 	goto exit;
 	
     case OP_show:
     case OP_hide:
-	arg_unary = expect_command_object(data_manager, lexer);
+	arg_unary = expect_command_object(lexer);
 	if (arg_unary.is_undefined())
 	    goto exit;
 	
@@ -831,7 +834,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	    }
 	}
 	else if (arg_unary.type == OT_token) {
-	    arg_binary = expect_command_object(data_manager, lexer);
+	    arg_binary = expect_command_object(lexer);
 	    if (arg_binary.is_undefined())
 		goto exit;
 
@@ -880,7 +883,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	goto exit;
 	
     case OP_delete:
-	arg_unary = expect_command_object(data_manager, lexer);
+	arg_unary = expect_command_object(lexer);
 	if (arg_unary.is_undefined())
 	    goto exit;
 
@@ -913,7 +916,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 		    std::vector<int64_t>* arg_point_itr = lexer.tkn().itr;
 		    std::sort(arg_point_itr->begin(), arg_point_itr->end(), std::less<int64_t>());
 		    
-		    arg_tertiary = expect_command_object(data_manager, lexer);
+		    arg_tertiary = expect_command_object(lexer);
 		    switch(arg_tertiary.type) {
 		    case OT_plot_data:
 			if ((*arg_point_itr)[0] >= 0 && arg_point_itr->back() < int64_t(arg_tertiary.obj.plot_data->size())) {
@@ -956,7 +959,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 		    }
 		}
 		else {
-		    arg_binary = expect_command_object(data_manager, lexer);
+		    arg_binary = expect_command_object(lexer);
 		    if (arg_binary.is_undefined())
 			goto exit;
 		    if (arg_binary.tkn.type != tkn_int) {
@@ -964,7 +967,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 			goto exit;
 		    }
 		    
-		    arg_tertiary = expect_command_object(data_manager, lexer);
+		    arg_tertiary = expect_command_object(lexer);
 		    switch(arg_tertiary.type) {
 		    case OT_plot_data:
 			if (arg_binary.tkn.i < int64_t(arg_tertiary.obj.plot_data->size())) {
@@ -1018,7 +1021,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	goto exit;
 	
     case OP_export:
-	arg_unary = expect_command_object(data_manager, lexer);
+	arg_unary = expect_command_object(lexer);
 	if (arg_unary.is_undefined())
 	    goto exit;
 	{
@@ -1062,7 +1065,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	}
 	++lexer.tkn_idx;
 	
-	arg_binary = expect_command_object(data_manager, lexer);
+	arg_binary = expect_command_object(lexer);
 	if (arg_binary.is_undefined())
 	    goto exit;
 
@@ -1074,7 +1077,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	if (sub_level == 0 && add_command) {
 	    g_all_commands.pop(); // remove the cmd for running the script
 	}
-	run_command_file(data_manager, std::string(arg_binary.tkn.sv));
+	run_command_file(std::string(arg_binary.tkn.sv));
 	goto exit;
 	
     case OP_save:
@@ -1106,7 +1109,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	goto exit;
 	
     case OP_fit:
-	arg_unary = expect_command_object(data_manager, lexer);
+	arg_unary = expect_command_object(lexer);
 	if (arg_unary.is_undefined())
 	    goto exit;
 	
@@ -1115,7 +1118,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	    goto exit;
 	}
 
-	arg_binary = expect_command_object(data_manager, lexer);
+	arg_binary = expect_command_object(lexer);
 	if (arg_binary.is_undefined())
 	    goto exit;
 
@@ -1132,31 +1135,42 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	    goto exit;
 	}
 	++lexer.tkn_idx;
-	int iterations = lexer.tkn().i;
-
-	std::vector<double*> param_list;
-
-	while(lexer.tkn(1).type == tkn_ident)
 	{
-	    ++lexer.tkn_idx;
-	    int param_idx = arg_unary.obj.function->get_parameter_idx(lexer.tkn().sv);
-	    if (param_idx < 0) {
-		lexer.parsing_error(lexer.tkn(), "This parameter does not exist.");
-	    }
+	    int iterations = lexer.tkn().i;
+	    std::vector<double*> param_list;
 	    
-	    param_list.push_back(arg_unary.obj.function->get_parameter_ref(param_idx));
-	}
+	    while(lexer.tkn(1).type == tkn_ident)
+	    {
+		++lexer.tkn_idx;
+		int param_idx = arg_unary.obj.function->get_parameter_idx(lexer.tkn().sv);
+		if (param_idx < 0) {
+		    lexer.parsing_error(lexer.tkn(), "This parameter does not exist.");
+		}
+	    
+		param_list.push_back(arg_unary.obj.function->get_parameter_ref(param_idx));
+	    }
 
-	if (param_list.empty()) {
-	    arg_unary.obj.function->get_all_param_ref(param_list);
-	}
+	    if (param_list.empty()) {
+		arg_unary.obj.function->get_all_param_ref(param_list);
+	    }
 
-	arg_unary.obj.function->fit_to_data(arg_binary.obj.plot_data, iterations, param_list, false);
+	    arg_unary.obj.function->fit_to_data(arg_binary.obj.plot_data, iterations, param_list, false);
+	}
+	goto exit;
+	
+    case OP_new:
+	if (!expect_next_token(lexer))
+	    return {};
+	data_manager.new_plot_data();
+	if (lexer.tkn(1).type == tkn_string) {
+	    ++lexer.tkn_idx;
+	    data_manager.plot_data.back()->info.header = lexer.tkn(0).sv;
+	}
 	goto exit;
     }
 
     // object = op unary binary (assign expression to object)
-    object = get_command_object(data_manager, lexer);
+    object = get_command_object(lexer);
     if (object.is_undefined()) {
 	lexer.parsing_error(object.tkn, "Undefined object.");
 	goto exit;
@@ -1177,7 +1191,7 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
 	op = get_command_operator(lexer.tkn());
     }
 
-    arg_unary = expect_command_object(data_manager, lexer);
+    arg_unary = expect_command_object(lexer);
     if (arg_unary.is_undefined()) {
 	lexer.parsing_error(arg_unary.tkn, "Undefined object.");
 	goto exit;
@@ -1194,14 +1208,14 @@ bool handle_command(Data_Manager &data_manager, Lexer& lexer, int sub_level, boo
     }
     
     if (op_arg_cnt_table[op.type] >= 2) {
-	arg_binary = expect_command_object(data_manager, lexer);
+	arg_binary = expect_command_object(lexer);
 	if (arg_binary.is_undefined()) {
 	    lexer.parsing_error(arg_unary.tkn, "Undefined object.");
 	    goto exit;
 	}
     }
 
-    execute_assign_operation(lexer, data_manager, object, op, arg_unary, arg_binary);
+    execute_assign_operation(lexer, object, op, arg_unary, arg_binary);
 
 exit:
 
@@ -1212,10 +1226,10 @@ exit:
 
     if (error_cnt != logger.error_cnt)
     {
-	object.delete_new_object(data_manager);
-	arg_unary.delete_new_object(data_manager);
-	arg_binary.delete_new_object(data_manager);
-	arg_tertiary.delete_new_object(data_manager);
+	object.delete_new_object();
+	arg_unary.delete_new_object();
+	arg_binary.delete_new_object();
+	arg_tertiary.delete_new_object();
     }
     
     lexer.tkn_idx = 0;

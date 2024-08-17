@@ -58,7 +58,7 @@ struct Command_Object
 	}
     }
     
-    void delete_new_object(Data_Manager& data_manager);
+    void delete_new_object();
 
     bool is_undefined() { return type == OT_undefined; }
 };
@@ -87,6 +87,7 @@ enum Operator_Type
     OP_save,
     OP_zero,
     OP_help,
+    OP_new,
     OP_SIZE,
 };
 
@@ -113,6 +114,7 @@ inline const char *operator_type_name_table[OP_SIZE] {
     "save",
     "zero",
     "help",
+    "new",
 };
 
 inline int op_arg_cnt_table[OP_SIZE] {
@@ -138,6 +140,7 @@ inline int op_arg_cnt_table[OP_SIZE] {
     0,
     0,
     0,
+    1,
 };
 
 struct Command_Operator
@@ -149,6 +152,6 @@ struct Command_Operator
 
 // command structure:
 // object (to be changed or created) = operator (+,-,fit) object_A (unary) object_B (binary)
-bool handle_command(Data_Manager &data_manager, Lexer &lexer, int sub_level = 0, bool add_command = true);
-void handle_command_file(Data_Manager &data_manager, std::string file);
-void re_run_all_commands(Data_Manager& data_manager);
+bool handle_command(Lexer &lexer, int sub_level = 0, bool add_command = true);
+void handle_command_file(std::string file);
+void re_run_all_commands();

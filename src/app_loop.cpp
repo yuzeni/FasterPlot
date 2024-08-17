@@ -3,22 +3,40 @@
 #include "raylib.h"
 
 #include "data_manager.hpp"
+#include "faster_plot.hpp"
+#include "utils.hpp"
 
 // primary application loop
-void app_loop(Text_Input &text_input, Content_Tree& content_tree)
+void app_loop(Text_Input &text_input, Content_Tree& content_tree, FPlot::Faster_Plot_flags flags)
 {
+    using namespace FPlot;
+    
     if (!WindowShouldClose())
     {
-	handle_dropped_files(data_manager);
-	text_input.update(data_manager);
-	data_manager.update(content_tree);
+	handle_dropped_files();
+	
+	if (check_flag(flags, FPL_TEXT_INPUT)) {
+	    text_input.update();
+	}
+
+	data_manager.update_viewport();
+	
+	if (check_flag(flags, FPL_CONTENT_TREE)) {
+	    data_manager.update_content_tree(content_tree);
+	}
 
 	BeginDrawing();
 	{
 	    ClearBackground(WHITE);
 	    data_manager.draw();
-	    text_input.draw();
-	    content_tree.draw();
+	    
+	    if (check_flag(flags, FPL_TEXT_INPUT)) {
+		text_input.draw();
+	    }
+	    
+	    if (check_flag(flags, FPL_CONTENT_TREE)) {
+		content_tree.draw();
+	    }
 	}
 	EndDrawing();
     }
@@ -33,6 +51,7 @@ void app_loop()
 {
     if (!WindowShouldClose())
     {
+	data_manager.update_viewport();
 	BeginDrawing();
 	{
 	    ClearBackground(WHITE);

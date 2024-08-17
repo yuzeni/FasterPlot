@@ -11,7 +11,7 @@
 #define SCRIPT_FILE_TYPE ".script"
 #define SCRIPT_DIRECTORY "scripts/"
 
-bool interp_plot_data(Data_Manager &data_manager, Plot_Data *plot_data, int n_itr)
+bool interp_plot_data(Plot_Data *plot_data, int n_itr)
 {
     if (plot_data->y.empty())
 	return false;
@@ -51,7 +51,7 @@ bool interp_plot_data(Data_Manager &data_manager, Plot_Data *plot_data, int n_it
     plot_data->y = new_y;
 
     if (n_itr >= 2)
-	return interp_plot_data(data_manager, plot_data, n_itr - 1);
+	return interp_plot_data(plot_data, n_itr - 1);
     return true;
 }
 
@@ -101,7 +101,7 @@ bool get_extrema_plot_data(Plot_Data *object_plot_data, Plot_Data *plot_data)
     return true;
 }
 
-void run_command_file(Data_Manager& data_manager, std::string file_name)
+void run_command_file(std::string file_name)
 {
     if (!(std::filesystem::exists(SCRIPT_DIRECTORY))) {
         if (!(std::filesystem::create_directory(SCRIPT_DIRECTORY))) {
@@ -117,18 +117,18 @@ void run_command_file(Data_Manager& data_manager, std::string file_name)
 	return;
     }
     std::string file = content.first;
-
+    
     logger.log_info("Running script '%s'\n", file_name.c_str());
-    handle_command_file(data_manager, file);
+    handle_command_file(file);
 }
 
-void run_command_file_absolute_path(Data_Manager &data_manager, std::string file_name)
+void run_command_file_absolute_path(std::string file_name)
 {
     auto content = parse_file_cstr(file_name.c_str());
     std::string file = content.first;
 
     logger.log_info("Running script '%s'\n", file_name.c_str());
-    handle_command_file(data_manager, file);
+    handle_command_file(file);
 }
 
 void save_command_file(std::string file_name)

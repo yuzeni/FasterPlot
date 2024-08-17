@@ -269,7 +269,7 @@ bool Data_Manager::keyboard_access()
     return g_keyboard_lock == 0 || g_keyboard_lock == key_board_lock_id;
 }
 
-void Data_Manager::update(Content_Tree& content_tree)
+void Data_Manager::update_viewport()
 {
     static int old_g_screen_height = GetScreenHeight();
     camera.coord_sys.origin.y += GetScreenHeight() - old_g_screen_height;
@@ -316,11 +316,15 @@ void Data_Manager::update(Content_Tree& content_tree)
 
 		graph_color_array_idx = original_graph_color_array_idx;
 		copy_data_to_data(original_plot_data, plot_data, original_functions, functions);
-		re_run_all_commands(*this);
+		re_run_all_commands();
 	    }
 	}
     }
+    
+}
 
+void Data_Manager::update_content_tree(Content_Tree& content_tree)
+{
     content_tree.clear();
     
     for (size_t i = 0; i < plot_data.size(); ++i) {
