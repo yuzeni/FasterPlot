@@ -20,7 +20,7 @@ namespace utils {
 std::pair<char *, size_t> parse_file_cstr(const char *file_name);
 
 struct Plot_Data;
-std::vector<Plot_Data*> parse_numeric_csv_file(const std::string& file_name);
+std::vector<Plot_Data *> parse_numeric_csv_file(const std::string &file_name);
 
 struct Log_Msg
 {

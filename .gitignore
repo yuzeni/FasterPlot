@@ -6,6 +6,8 @@ test_eingabe/
 
 # Files
 compile_flags.txt
+run.bat
+build_deb.bat
 
 # Emacs
 \#*\#

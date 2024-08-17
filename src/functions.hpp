@@ -76,7 +76,6 @@ struct Parameter
 {
     double val;
     std::string name;
-    double fit_change_rate;
 };
 
 class Generic_Function : public Function
@@ -99,5 +98,5 @@ public:
 
 private:
 
-    void generic_fit_approximation(Plot_Data *data);
+    void generic_fit_approximation(Plot_Data *data, int iterations);
 };

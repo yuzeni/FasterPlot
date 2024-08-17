@@ -3,6 +3,12 @@
 #include "app_loop.hpp"
 #include "global_vars.hpp"
 #include "gui_elements.hpp"
+#include "..\resources\font.hpp"
+
+#if FASTER_PLOT_LIBRARY
+
+
+#else
 
 int main()
 {
@@ -14,9 +20,9 @@ int main()
     SetExitKey(KEY_NULL);
 
     // load font in different sizes
-    g_app_font_18 = LoadFontEx("resources/Roboto-Regular.ttf", 18, nullptr, 0);
-    g_app_font_20 = LoadFontEx("resources/Roboto-Regular.ttf", 20, nullptr, 0);
-    g_app_font_22 = LoadFontEx("resources/Roboto-Regular.ttf", 22, nullptr, 0);
+    g_app_font_18 = LoadFontFromMemory(".ttf", resources_Roboto_Regular_ttf, resources_Roboto_Regular_ttf_len, 18, nullptr, 0);
+    g_app_font_20 = LoadFontFromMemory(".ttf", resources_Roboto_Regular_ttf, resources_Roboto_Regular_ttf_len, 20, nullptr, 0);
+    g_app_font_22 = LoadFontFromMemory(".ttf", resources_Roboto_Regular_ttf, resources_Roboto_Regular_ttf_len, 22, nullptr, 0);
 
     Text_Input text_input;
     Content_Tree content_tree;
@@ -29,3 +35,5 @@ int main()
     CloseWindow();
     return 0;
 }
+
+#endif

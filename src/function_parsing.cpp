@@ -62,8 +62,7 @@ Op_Tree_Node *nud_ident(NUD_ARGS)
     int param_idx = generic_function.get_parameter_idx(node->tkn.sv);
     if (param_idx == -1) {
 	generic_function.params.push_back({ .val = std::numeric_limits<double>().quiet_NaN(),
-		.name = std::string(node->tkn.sv),
-		.fit_change_rate = 1 });
+		                            .name = std::string(node->tkn.sv) });
 	node->param_idx = generic_function.params.size() - 1;
     }
     else {

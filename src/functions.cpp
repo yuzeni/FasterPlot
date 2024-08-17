@@ -6,10 +6,15 @@
 #include "global_vars.hpp"
 #include "raylib.h"
 #include "utils.hpp"
+
 #include <cmath>
 #include <string>
+#include <random>
+#include <iostream>
 
-static void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vector<double*>& param_list, int iterations);
+static void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vector<double *> &param_list, int iterations);
+static double squared_error(Plot_Data *data, Function &function);
+static double squared_error_derivative(Plot_Data* data, double *param, Function& function);
 
 void Function::get_all_param_ref(std::vector<double*>& param_list)
 {
@@ -495,10 +500,10 @@ int Generic_Function::get_parameter_idx(std::string_view name)
 
 void Generic_Function::fit_to_data(Plot_Data *plot_data, int iterations, std::vector<double *> &param_list, [[maybe_unused]] bool warm_start)
 {
-    if (warm_start) {
-	generic_fit_approximation(plot_data);
-    }
-    function_fit_iterative_naive(plot_data, *this, param_list, iterations);
+    // if (warm_start) {
+    generic_fit_approximation(plot_data, iterations);
+    // }
+    // function_fit_iterative_naive(plot_data, *this, param_list, iterations);
 }
 
 double* Generic_Function::get_parameter_ref(int idx)
@@ -511,9 +516,77 @@ double* Generic_Function::get_parameter_ref(int idx)
     }
 }
 
-void Generic_Function::generic_fit_approximation(Plot_Data *data)
+struct Param_Candidate
 {
+    double val;
+    double err;
+    double std_dev;
+    // std::normal_distribution<double> mutator;
+};
+
+// Genetic algortihm for finding a first approximation for the function.
+void Generic_Function::generic_fit_approximation(Plot_Data *data, int iterations)
+{
+    // Hyper parameters.
+    double init_value = 1;     // Initial value for all parameters.
+    double std_dev = 1;        // Initial std-dev for all parameters.
+    int generation_size = 100;
+    int surviver_cnt = 1;
+
+    // Init values.
+    for (auto& param : params) {
+	param.val = init_value;
+    }
+
+    std::random_device rand_device;
+    std::mt19937 rand_gen(rand_device());
+
+    std::vector<std::vector<Param_Candidate>> best_params {
+	params.size(), std::vector<Param_Candidate>(surviver_cnt, Param_Candidate{.val = init_value, .err = 0, .std_dev = std_dev})
+    };
+
+    for (size_t param_i = 0; param_i < params.size(); ++param_i) {
+	for (int surv_i = 0; surv_i < surviver_cnt; ++surv_i) {
+	    best_params[param_i][surv_i].err = squared_error(data, *this);
+	}
+    }
+
+    double time_begin = GetTime();
     
+    for (int itr = 0; itr < iterations; ++itr)
+    {
+	for (int g_i = 0; g_i < generation_size / surviver_cnt; ++g_i)
+	{
+	    // if (GetTime() - time_begin > 1.0 / (double(TARGET_FPS) * 0.33)) {
+		app_loop();
+		time_begin = GetTime();
+	    // } 
+	    for (int surv_i = 0; surv_i < surviver_cnt; ++surv_i) {
+		for (size_t param_i = 0; param_i < params.size(); ++param_i)
+		{
+		    // std::normal_distribution<double> std_dev_mutator{best_params[param_i][surv_i].std_dev, std::abs(best_params[param_i][surv_i].std_dev)};
+		    // double this_std_dev = std_dev_mutator(rand_gen);
+		    std::normal_distribution<double> this_mutator{best_params[param_i][surv_i].val, std::abs(best_params[param_i][surv_i].val) * 10};
+		    
+		    params[param_i].val = this_mutator(rand_gen);
+		    double this_error = squared_error(data, *this);
+
+		    // Based on the fact that j will be correct-index + 1 after the for loop ends.
+		    int i = -1;
+		    for (; this_error < best_params[param_i][i + 1].err && i + 1 < surviver_cnt; ++i) {}
+		    if (i + 1 != 0) {
+			best_params[param_i][i].val = params[param_i].val;
+			best_params[param_i][i].err = this_error;
+			best_params[param_i][i].std_dev = 1;
+		    }
+		}
+	    }
+	}
+    }
+    
+    for (size_t i = 0; i < params.size(); ++i) {
+	params[i].val = best_params[i].back().val;
+    }
 }
 
 /* Function Type Independents **************************/
