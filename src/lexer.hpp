@@ -50,6 +50,7 @@ enum Token_enum : uint32_t {
     tkn_save,
     tkn_zero,
     tkn_help,
+    tkn_iter,
 
     tkn_sin, // math keywords
     tkn_cos,

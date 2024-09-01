@@ -501,9 +501,9 @@ int Generic_Function::get_parameter_idx(std::string_view name)
 void Generic_Function::fit_to_data(Plot_Data *plot_data, int iterations, std::vector<double *> &param_list, [[maybe_unused]] bool warm_start)
 {
     // if (warm_start) {
-    generic_fit_approximation(plot_data, iterations);
+    // generic_fit_approximation(plot_data, iterations);
     // }
-    // function_fit_iterative_naive(plot_data, *this, param_list, iterations);
+    function_fit_iterative_naive(plot_data, *this, param_list, iterations);
 }
 
 double* Generic_Function::get_parameter_ref(int idx)
@@ -621,10 +621,10 @@ static double squared_error_derivative(Plot_Data* data, double *param, Function&
 
 static void function_fit_iterative_naive(Plot_Data *data, Function &function, std::vector<double*>& param_list, int iterations)
 {
-    logger.log_info("Error before iterative optimization: %f\n", squared_error(data, function));
+    // logger.log_info("Error before iterative optimization: %f\n", squared_error(data, function));
     
     std::vector<double> derivatives(param_list.size(), 0);
-    std::vector<double> step_sizes(param_list.size(), 0.000001);
+    std::vector<double> step_sizes(param_list.size(), 0.00000001);
 
     double time_begin = GetTime();
     double time_begin_begin = time_begin;
@@ -678,11 +678,11 @@ static void function_fit_iterative_naive(Plot_Data *data, Function &function, st
 	    }
 	}
 	if (all_converged) {
-	    logger.log_info("Converged at iteration: %d\n", i);
+	    // logger.log_info("Converged at iteration: %d\n", i);
 	    break;
 	}
 	    
     }
-    logger.log_info("Error after iterative optimization: %f\n", squared_error(data, function));
-    logger.log_info("Elapsed time: %f s\n", GetTime() - time_begin_begin);
+    // logger.log_info("Error after iterative optimization: %f\n", squared_error(data, function));
+    // logger.log_info("Elapsed time: %f s\n", GetTime() - time_begin_begin);
 }

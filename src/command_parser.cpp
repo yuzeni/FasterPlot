@@ -169,6 +169,7 @@ static Command_Object get_command_object(Lexer &lexer)
     case tkn_lines:
     case tkn_index:
     case tkn_script:
+    case tkn_iter:
 	object.type = OT_token;
 	break;
 	
@@ -826,7 +827,7 @@ bool handle_command(Lexer& lexer, int sub_level, bool add_command)
 	    }
 	}
 	else if (arg_unary.type == OT_function) {
-	    if (arg_unary.obj.plot_data->info.visible && op.type == OP_show) {
+	    if (arg_unary.obj.function->info.visible && op.type == OP_show) {
 		data_manager.fit_camera_to_plot(arg_unary.obj.function);
 	    }
 	    else {
@@ -1112,33 +1113,56 @@ bool handle_command(Lexer& lexer, int sub_level, bool add_command)
 	arg_unary = expect_command_object(lexer);
 	if (arg_unary.is_undefined())
 	    goto exit;
+
+        {
+            bool warm_start = true;
+            switch(arg_unary.type) {
+            case OT_function:
+                break;
+            case OT_token:
+                if (arg_unary.tkn.type != tkn_iter) {
+                    lexer.parsing_error(arg_unary.tkn, "Expected nothing or the token 'iter'.");
+                    goto exit;   
+                }
+                
+                arg_unary = expect_command_object(lexer);
+                if (arg_unary.is_undefined())
+                    goto exit;
+                
+                if (arg_unary.type != OT_function) {
+                    lexer.parsing_error(arg_unary.tkn, "Expected a function but got '%s'.", object_type_name_table[object.type]);
+                    goto exit;
+                }
+
+                warm_start = false;
+                break;
+            default:
+                lexer.parsing_error(arg_unary.tkn, "Expected a function or a token, but got '%s'.", object_type_name_table[object.type]);
+                goto exit;
+                break;
+            }
+        
+            arg_binary = expect_command_object(lexer);
+            if (arg_binary.is_undefined())
+                goto exit;
+
+            if (arg_binary.type != OT_plot_data) {
+                lexer.parsing_error(arg_binary.tkn, "The argument '%s' is not supported by the operation '%s'",
+                                    object_type_name_table[arg_binary.type], operator_type_name_table[op.type]);
+                goto exit;
+            }
 	
-	if (arg_unary.type != OT_function) {
-	    lexer.parsing_error(arg_unary.tkn, "Expected function, but got '%s'.", object_type_name_table[object.type]);
-	    goto exit;
-	}
+            arg_unary.obj.function->fit_from_data = arg_binary.obj.plot_data;
 
-	arg_binary = expect_command_object(lexer);
-	if (arg_binary.is_undefined())
-	    goto exit;
-
-	if (arg_binary.type != OT_plot_data) {
-	    lexer.parsing_error(arg_binary.tkn, "The argument '%s' is not supported by the operation '%s'",
-				object_type_name_table[arg_binary.type], operator_type_name_table[op.type]);
-	    goto exit;
-	}
-	
-	arg_unary.obj.function->fit_from_data = arg_binary.obj.plot_data;
-
-	if (lexer.tkn(1).type != tkn_int) {
-	    lexer.parsing_error(lexer.tkn(1), "Expected an integer argument.");
-	    goto exit;
-	}
-	++lexer.tkn_idx;
-	{
+            if (lexer.tkn(1).type != tkn_int) {
+                lexer.parsing_error(lexer.tkn(1), "Expected an integer argument.");
+                goto exit;
+            }
+            ++lexer.tkn_idx;
 	    int iterations = lexer.tkn().i;
 	    std::vector<double*> param_list;
-	    
+
+            // parse parameter list for the parameters which should be optimized for the fit.
 	    while(lexer.tkn(1).type == tkn_ident)
 	    {
 		++lexer.tkn_idx;
@@ -1154,18 +1178,46 @@ bool handle_command(Lexer& lexer, int sub_level, bool add_command)
 		arg_unary.obj.function->get_all_param_ref(param_list);
 	    }
 
-	    arg_unary.obj.function->fit_to_data(arg_binary.obj.plot_data, iterations, param_list, false);
+	    arg_unary.obj.function->fit_to_data(arg_binary.obj.plot_data, iterations, param_list, warm_start);
 	}
 	goto exit;
 	
     case OP_new:
-	if (!expect_next_token(lexer))
-	    return {};
-	data_manager.new_plot_data();
-	if (lexer.tkn(1).type == tkn_string) {
-	    ++lexer.tkn_idx;
-	    data_manager.plot_data.back()->info.header = lexer.tkn(0).sv;
-	}
+        switch(lexer.tkn(1).type) {
+        case tkn_data:
+            ++lexer.tkn_idx;
+            data_manager.new_plot_data();
+            if (lexer.tkn(1).type == tkn_string) {
+                ++lexer.tkn_idx;
+                data_manager.plot_data.back()->info.header = lexer.tkn(0).sv;
+            }
+            break;
+        case tkn_function:
+            ++lexer.tkn_idx;
+            switch(lexer.tkn(1).type) {
+            case tkn_linear:
+                data_manager.new_function(new Linear_Function());
+                ++lexer.tkn_idx;
+                break;
+            case tkn_sinusoid:
+                data_manager.new_function(new Sinusoidal_Function());
+                ++lexer.tkn_idx;
+                break;
+            default:
+                lexer.parsing_error(lexer.tkn(1), "Expected linear or sinusoid.");
+                break;
+            }
+            if (lexer.tkn(1).type == tkn_string) {
+                ++lexer.tkn_idx;
+                data_manager.functions.back()->info.header = lexer.tkn(0).sv;
+            }
+            break;
+        default:
+            lexer.parsing_error(lexer.tkn(1), "Expected function or data.");
+            break;
+        }
+
+
 	goto exit;
     }
 

@@ -1,10 +1,12 @@
 #include "data_manager.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <fstream>
 #include <filesystem>
+#include <iostream>
 
 #include "functions.hpp"
 #include "global_vars.hpp"
@@ -112,23 +114,56 @@ void Data_Manager::draw_functions()
     {
 	if (!func->info.visible)
 	    continue;
-	
-	for(size_t ix = 0; ix < size_t(GetScreenWidth()); ix += 1)
+
+        double d_sqr = 0;
+        double prev_y = 0;
+        double dx = 1.0;
+        uint64_t loop_cnt = 0;
+        uint64_t draw_cnt = 0;
+        int screen_height = GetScreenHeight();
+        bool clipped = false;
+	for(double x = 0; x < GetScreenWidth(); x += dx)
 	{
-	    double camera_space_x = app_coordinate_system.transform_to(Vec2<double>{double(ix), 0} - camera.coord_sys.origin, camera.coord_sys).x - camera.origin_offset.x;
-	    Vec2<double> screen_space_point = camera.coord_sys.transform_to(Vec2<double>{camera_space_x, func->operator()(camera_space_x)} + camera.origin_offset,
-									    app_coordinate_system);
-	    Vec2<double> prev_screen_space_point;
-	    if(func->info.plot_type & PT_DISCRETE) {
-		DrawCircle(std::round(screen_space_point.x), std::round(screen_space_point.y), func->info.thickness / 2.f, func->info.color);
-	    }
-	    if(func->info.plot_type & PT_INTERP_LINEAR) {
-		if(ix > 0) {
-		    DrawLineEx(prev_screen_space_point, screen_space_point, func->info.thickness / 3.f, func->info.color);
-		}
-	    }
-	    prev_screen_space_point = screen_space_point;
+            double camera_space_x;
+            Vec2<double> screen_space_point;
+            for(;;) {
+                camera_space_x = app_coordinate_system.transform_to(Vec2<double>{x, 0} - camera.coord_sys.origin, camera.coord_sys).x - camera.origin_offset.x;
+                screen_space_point = camera.coord_sys.transform_to(Vec2<double>{camera_space_x, func->operator()(camera_space_x)} + camera.origin_offset,
+                                                                   app_coordinate_system);
+                if (screen_space_point.y < 0 || screen_space_point.y > screen_height) {
+                    clipped = true;
+                    break;
+                }
+                
+                if (x == 0) {
+                    prev_y = screen_space_point.y;
+                }
+                
+                d_sqr = sqr(dx) + sqr(screen_space_point.y - prev_y);
+
+                if (d_sqr > sqr(1.2) && dx > 0.01) {
+                    x -= dx;
+                    dx *= 0.25;
+                }
+                else if (d_sqr < sqr(0.8) && dx > 0.01) {
+                    x -= dx;
+                    dx *= 1.25;
+                }
+                else {
+                    break;
+                }
+                x += dx;
+                ++loop_cnt;
+            }
+
+            if (!clipped) {
+                DrawPixelV(screen_space_point, func->info.color);
+                ++draw_cnt;
+            }
+            prev_y = screen_space_point.y;
+            clipped = false;
 	}
+        std::cout << loop_cnt << ", " << draw_cnt << '\n';
     }
 }
 
@@ -180,9 +215,14 @@ void Data_Manager::delete_plot_data(Plot_Data *data)
     update_element_indices();
 }
 
-Function* Data_Manager::new_function()
+Function* Data_Manager::new_function(Function* function)
 {
-    functions.push_back(new Generic_Function);
+    if (function) {
+        functions.push_back(function);
+    }
+    else {
+        functions.push_back(new Generic_Function);
+    }
     
     functions.back()->info.color = graph_color_array[graph_color_array_idx];
     functions.back()->index = functions.size() - 1;

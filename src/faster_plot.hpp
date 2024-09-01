@@ -20,7 +20,7 @@ namespace FPlot
 	void enable_flags(Faster_Plot_flags flags);
 	void disable_flags(Faster_Plot_flags flags);
 	void run_until_close();                                                // keeps the plot window open, until it is closed by the user.
-	void next_frame();                                                     // advance the window by one frame.
+	bool next_frame();                                                     // advance the window by one frame.
 	void run_command(std::string cmd);                                     // run any command
 	void update_data(size_t data_idx, size_t value_idx, double value);     // change a single value of a data object.
 	void resize_data(size_t data_idx, size_t size, double fill_value = 0); // resize a data object.

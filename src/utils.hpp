@@ -12,6 +12,7 @@
 
 constexpr double UTILS_PI = 3.1415926535897932384626433832795;
 constexpr double UTILS_EULER = 2.7182818284590452353602874713527;
+#define sqr(x) (x)*(x)
 
 namespace utils {
     constexpr uint64_t default_str_hash_value = 5381;

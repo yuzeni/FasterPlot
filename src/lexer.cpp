@@ -46,6 +46,7 @@ static const char *token_name_table[tkn_SIZE - 256]{
     "save",
     "zero",
     "help",
+    "iter",
 
     "sin",
     "cos",
@@ -124,6 +125,7 @@ Token_enum keyword_compare(const std::string_view sv)
     case cte_hash_c_str("save"): return tkn_save;
     case cte_hash_c_str("zero"): return tkn_zero;
     case cte_hash_c_str("help"): return tkn_help;
+    case cte_hash_c_str("iter"): return tkn_iter;
 	
     case cte_hash_c_str("sin"): return tkn_sin;
     case cte_hash_c_str("cos"): return tkn_cos;

@@ -7,7 +7,7 @@
 #include "utils.hpp"
 
 // primary application loop
-void app_loop(Text_Input &text_input, Content_Tree& content_tree, FPlot::Faster_Plot_flags flags)
+bool app_loop(Text_Input &text_input, Content_Tree& content_tree, FPlot::Faster_Plot_flags flags)
 {
     using namespace FPlot;
     
@@ -39,15 +39,17 @@ void app_loop(Text_Input &text_input, Content_Tree& content_tree, FPlot::Faster_
 	    }
 	}
 	EndDrawing();
+	return true;
     }
     else {
 	CloseWindow();
+	return false;
     }
 }
 
 // Secondary loop, for exclusively updatting the visuals.
 // The loop is used for showing data changes live, during computation, with an arbitary call rate.
-void app_loop()
+bool app_loop()
 {
     if (!WindowShouldClose())
     {
@@ -58,8 +60,10 @@ void app_loop()
 	    data_manager.draw();
 	}
 	EndDrawing();
+	return true;
     }
     else {
 	CloseWindow();
+	return false;
     }
 }

@@ -29,20 +29,9 @@ namespace FPlot {
 	g_app_font_20 = LoadFontFromMemory(".ttf", resources_Roboto_Regular_ttf, resources_Roboto_Regular_ttf_len, 20, nullptr, 0);
 	g_app_font_22 = LoadFontFromMemory(".ttf", resources_Roboto_Regular_ttf, resources_Roboto_Regular_ttf_len, 22, nullptr, 0);
     }
-
-    void Faster_Plot::run_until_close()
-    {
-	while (!WindowShouldClose()) {
-	    app_loop(text_input, content_tree, flags);
-	}
-	CloseWindow();
-    }
     
-    void Faster_Plot::next_frame()
-    {
-	app_loop();
-    }
-
+    void Faster_Plot::run_until_close() { while(app_loop(text_input, content_tree, flags)); }
+    bool Faster_Plot::next_frame() { return app_loop(text_input, content_tree, flags); }
     void Faster_Plot::enable_flags(Faster_Plot_flags flags) { this->flags = add_flag(this->flags, flags); }
     void Faster_Plot::disable_flags(Faster_Plot_flags flags) { this->flags = remove_flag(this->flags, flags); }
 

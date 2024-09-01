@@ -18,8 +18,12 @@ bool interp_plot_data(Plot_Data *plot_data, int n_itr)
 
     if (!plot_data->x) {
 	plot_data->x = data_manager.new_plot_data(get_new_default_x_for_plot_data(plot_data));
+    } else {
+        Plot_Data* new_x = data_manager.new_plot_data();
+        new_x->y = plot_data->x->y;
+        plot_data->x = new_x;
     }
-
+    
     std::vector<double> new_y(plot_data->y.size() * 2);
     std::vector<double> new_x(plot_data->x->y.size() * 2);
     

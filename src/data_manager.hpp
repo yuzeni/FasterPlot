@@ -99,7 +99,7 @@ struct Data_Manager
     void load_external_plot_data(const std::string& file_name);
     Plot_Data* new_plot_data(Plot_Data* data = nullptr);
     void delete_plot_data(Plot_Data *data);
-    Function* new_function();
+    Function* new_function(Function* function = nullptr);
     void delete_function(Function *function);
     Function* change_function_type(Function *orig_func, Function* new_func);
     void fit_camera_to_plot(Plot_Data* plot_data);
