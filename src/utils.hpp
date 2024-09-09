@@ -1,6 +1,7 @@
 #pragma once
 
 #include "raylib.h"
+#include "faster_plot.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -74,37 +75,39 @@ struct Logger {
     template <typename... Args>
     void log_error(const char *msg, Args... args)
     {
-	char buffer[LOG_OUTPUT_ERROR_MSG_SIZE];
-	int true_size = snprintf(buffer, LOG_OUTPUT_ERROR_MSG_SIZE, msg, args...);
-	if(true_size > LOG_OUTPUT_ERROR_MSG_SIZE) {
-	    log_error("Last error message did not fit in the buffer of size %d.", LOG_OUTPUT_ERROR_MSG_SIZE);
-	}
-	else {
-	    printf(UTILS_ERROR_COLOR "ERROR:" UTILS_END_COLOR " %s\n", buffer);
-	    // log_msgs.push_back({"ERROR: ", RED});
-	    // log_msgs.push_back({buffer, BLACK});
-	}
+        if (log_level >= FPlot::LOGLVL_ERROR) {
+            char buffer[LOG_OUTPUT_ERROR_MSG_SIZE];
+            int true_size = snprintf(buffer, LOG_OUTPUT_ERROR_MSG_SIZE, msg, args...);
+            if(true_size > LOG_OUTPUT_ERROR_MSG_SIZE) {
+                log_error("Last error message did not fit in the buffer of size %d.", LOG_OUTPUT_ERROR_MSG_SIZE);
+            }
+            else {
+                printf(UTILS_ERROR_COLOR "ERROR:" UTILS_END_COLOR " %s\n", buffer);
+            }
+        }
 	++error_cnt;
     }
 
     template <typename... Args>
     void log_info(const char *msg, Args... args)
     {
-	char buffer[LOG_OUTPUT_ERROR_MSG_SIZE];
-	int true_size = snprintf(buffer, LOG_OUTPUT_ERROR_MSG_SIZE, msg, args...);
-	if(true_size > LOG_OUTPUT_ERROR_MSG_SIZE) {
-	    log_error("Last error message did not fit in the buffer of size %d.", LOG_OUTPUT_ERROR_MSG_SIZE);
-	}
-	else {
-	    printf("%s", buffer);
-	    // log_msgs.push_back({buffer, BLACK});
-	}
+        if (log_level >= FPlot::LOGLVL_INFO) {
+            char buffer[LOG_OUTPUT_ERROR_MSG_SIZE];
+            int true_size = snprintf(buffer, LOG_OUTPUT_ERROR_MSG_SIZE, msg, args...);
+            if(true_size > LOG_OUTPUT_ERROR_MSG_SIZE) {
+                log_error("Last error message did not fit in the buffer of size %d.", LOG_OUTPUT_ERROR_MSG_SIZE);
+            }
+            else {
+                printf("%s", buffer);
+            }
+        }
     }
 
     void log_help_message();
+    void set_log_level(FPlot::Log_Level log_level) { this->log_level = log_level; };
 
-    // std::vector<Log_Msg> log_msgs;
     size_t error_cnt = 0;
+    FPlot::Log_Level log_level = FPlot::LOGLVL_INFO;
 };
 
 template <typename T>

@@ -12,6 +12,14 @@ namespace FPlot
 	FPL_CONTENT_TREE = 1 << 1,
     };
 
+    enum Log_Level
+    {
+        LOGLVL_NOTHING = 0,
+        LOGLVL_ERROR   = 1,
+        LOGLVL_WARNING = 2,
+        LOGLVL_INFO    = 3,
+    };
+
     class Faster_Plot
     {
     public:
@@ -19,6 +27,7 @@ namespace FPlot
 	void init_window();
 	void enable_flags(Faster_Plot_flags flags);
 	void disable_flags(Faster_Plot_flags flags);
+        void set_log_level(Log_Level log_level);
 	void run_until_close();                                                // keeps the plot window open, until it is closed by the user.
 	bool next_frame();                                                     // advance the window by one frame.
 	void run_command(std::string cmd);                                     // run any command

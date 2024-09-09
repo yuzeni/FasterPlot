@@ -110,6 +110,12 @@ void Data_Manager::draw_plot_data()
 
 void Data_Manager::draw_functions()
 {
+    uint64_t draw_cnt = 0;
+    const uint64_t max_draw_cnt = 200'000;
+    const uint64_t min_draw_cnt = 180'000; // dx_lower_limit_base has priority
+    const double dx_lower_limit_base = 0.001;
+    static double dx_lower_limit = dx_lower_limit_base;
+    
     for(const auto& func : functions)
     {
 	if (!func->info.visible)
@@ -117,21 +123,25 @@ void Data_Manager::draw_functions()
 
         double d_sqr = 0;
         double prev_y = 0;
-        double dx = 1.0;
-        uint64_t loop_cnt = 0;
-        uint64_t draw_cnt = 0;
+        const int max_refine_itr = 5;
+        const double dx_default = 1.0;
+        double dx = dx_default;
         int screen_height = GetScreenHeight();
         bool clipped = false;
+        
 	for(double x = 0; x < GetScreenWidth(); x += dx)
 	{
             double camera_space_x;
             Vec2<double> screen_space_point;
-            for(;;) {
+            
+            for(int i = 0; i < max_refine_itr; ++i)
+            {
                 camera_space_x = app_coordinate_system.transform_to(Vec2<double>{x, 0} - camera.coord_sys.origin, camera.coord_sys).x - camera.origin_offset.x;
                 screen_space_point = camera.coord_sys.transform_to(Vec2<double>{camera_space_x, func->operator()(camera_space_x)} + camera.origin_offset,
                                                                    app_coordinate_system);
                 if (screen_space_point.y < 0 || screen_space_point.y > screen_height) {
                     clipped = true;
+                    dx = dx_default;
                     break;
                 }
                 
@@ -141,11 +151,11 @@ void Data_Manager::draw_functions()
                 
                 d_sqr = sqr(dx) + sqr(screen_space_point.y - prev_y);
 
-                if (d_sqr > sqr(1.2) && dx > 0.01) {
+                if (d_sqr > sqr(1.2) && dx > dx_lower_limit) {
                     x -= dx;
-                    dx *= 0.25;
+                    dx *= 0.75;
                 }
-                else if (d_sqr < sqr(0.8) && dx > 0.01) {
+                else if (d_sqr < sqr(0.8)) {
                     x -= dx;
                     dx *= 1.25;
                 }
@@ -153,7 +163,6 @@ void Data_Manager::draw_functions()
                     break;
                 }
                 x += dx;
-                ++loop_cnt;
             }
 
             if (!clipped) {
@@ -162,8 +171,20 @@ void Data_Manager::draw_functions()
             }
             prev_y = screen_space_point.y;
             clipped = false;
+
+            if (draw_cnt > max_draw_cnt) {
+                goto stop_drawing;
+            }
 	}
-        std::cout << loop_cnt << ", " << draw_cnt << '\n';
+    }
+
+stop_drawing:
+    
+    if (draw_cnt > max_draw_cnt) {
+        dx_lower_limit *= 1.25;
+    }
+    else if (draw_cnt < min_draw_cnt && dx_lower_limit > dx_lower_limit_base) {
+        dx_lower_limit *= 0.75;
     }
 }
 

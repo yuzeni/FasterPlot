@@ -35,6 +35,10 @@ namespace FPlot {
     void Faster_Plot::enable_flags(Faster_Plot_flags flags) { this->flags = add_flag(this->flags, flags); }
     void Faster_Plot::disable_flags(Faster_Plot_flags flags) { this->flags = remove_flag(this->flags, flags); }
 
+    void Faster_Plot::set_log_level(Log_Level log_level) {
+        logger.set_log_level(log_level);
+    }
+
     void Faster_Plot::run_command(std::string cmd)
     {
 	Lexer lexer;
